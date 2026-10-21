@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -51,3 +51,33 @@ jobs:
           name: ADSecurityAssessment-win-x64
           path: dist/ADSecurityAssessment.exe
           if-no-files-found: error
+
+      # Copia o .exe para a branch "binaries" (download direto pelo repositório, sem precisar abrir o artefato).
+      - name: Publish exe to the 'binaries' branch
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'binaries'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          Copy-Item dist/ADSecurityAssessment.exe $out
+          Set-Content -Path (Join-Path $out 'BUILD.txt') -Value "commit: ${{ github.sha }}`nrun: ${{ github.run_id }}"
+          Push-Location $out
+          git init -q -b binaries
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -q -m "ADSecurityAssessment.exe build ${{ github.run_number }} (${{ github.sha }})"
+          git remote add origin "https://x-access-token:$env:GH_TOKEN@github.com/${{ github.repository }}.git"
+          git push -f origin binaries
+          if ($LASTEXITCODE -ne 0) { throw 'git push to binaries failed' }
+          Pop-Location
+
+      # Em tags v* cria uma Release com o .exe anexado.
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" dist/ADSecurityAssessment.exe --title "AD Security Assessment ${{ github.ref_name }}" --notes "Executável único win-x64 (auto-contido). Baixe ADSecurityAssessment.exe e execute."
