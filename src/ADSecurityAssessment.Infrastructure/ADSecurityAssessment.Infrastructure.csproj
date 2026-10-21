@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(AdsTfm)</TargetFramework>
+    <RootNamespace>ADSecurityAssessment.Infrastructure</RootNamespace>
+    <AssemblyName>ADSecurityAssessment.Infrastructure</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ADSecurityAssessment.Core\ADSecurityAssessment.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- LDAP (somente leitura) e localizador de DC. Windows-only; as APIs são chamadas apenas em Windows. -->
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="$(AdsDsPackageVersion)" />
+    <PackageReference Include="System.DirectoryServices" Version="$(AdsDsPackageVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ADSecurityAssessment.Tests" />
+  </ItemGroup>
+</Project>

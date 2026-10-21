@@ -1,0 +1,794 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "ruleId": "AD-PWD-001",
+      "title": "Minimum password length below the configured baseline",
+      "description": "The minimum password length of a domain password policy (default domain policy or fine-grained password policy) is lower than the baseline of {MinPasswordLength} characters taken from the Microsoft Windows security baseline.",
+      "category": "Identity Security",
+      "module": "Password Security",
+      "severity": "Medium",
+      "condition": "minPwdLength lower than {MinPasswordLength}.",
+      "risk": "Short passwords are easier to guess or crack offline, increasing the chance of account compromise.",
+      "recommendation": "Increase the minimum password length in the Default Domain Policy or in the fine-grained password policy, after evaluating application and user impact. The target value is configurable in config/settings.json.",
+      "references": [
+        "windows-security-baseline",
+        "password-policy-m365"
+      ],
+      "dataset": "password-policies",
+      "scope": {
+        "field": "MinLength",
+        "op": "notNull"
+      },
+      "where": {
+        "field": "MinLength",
+        "op": "lt",
+        "valueSetting": "MinPasswordLength"
+      },
+      "affected": {
+        "name": "PolicyName",
+        "kind": "Policy",
+        "domain": "Domain"
+      },
+      "evidenceSource": "LDAP: domain head (minPwdLength) / Password Settings Container",
+      "evidence": [
+        {
+          "property": "MinLength",
+          "label": "Minimum password length",
+          "expected": ">= {MinPasswordLength}"
+        },
+        {
+          "property": "AppliesTo",
+          "label": "Applies to"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-PWD-002",
+      "title": "Password complexity requirement disabled",
+      "description": "The 'Password must meet complexity requirements' setting is disabled in a domain password policy.",
+      "category": "Identity Security",
+      "module": "Password Security",
+      "severity": "Medium",
+      "condition": "pwdProperties does not have DOMAIN_PASSWORD_COMPLEX (1) / msDS-PasswordComplexityEnabled is false.",
+      "risk": "Without complexity rules users may choose easily guessable passwords. (Long passphrases can compensate, so review together with the minimum length.)",
+      "recommendation": "Enable the password complexity requirement unless the organization deliberately relies on another control such as password filters or very long passphrases; document the exception.",
+      "references": [
+        "windows-security-baseline",
+        "ad-schema-pwdproperties"
+      ],
+      "dataset": "password-policies",
+      "scope": {
+        "field": "ComplexityEnabled",
+        "op": "notNull"
+      },
+      "where": {
+        "field": "ComplexityEnabled",
+        "op": "eq",
+        "value": false
+      },
+      "affected": {
+        "name": "PolicyName",
+        "kind": "Policy",
+        "domain": "Domain"
+      },
+      "evidenceSource": "LDAP: pwdProperties / msDS-PasswordComplexityEnabled",
+      "evidence": [
+        {
+          "property": "ComplexityEnabled",
+          "label": "Complexity enabled",
+          "expected": "True"
+        },
+        {
+          "property": "PwdProperties",
+          "label": "pwdProperties"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-PWD-003",
+      "title": "Password policy stores passwords using reversible encryption",
+      "description": "'Store passwords using reversible encryption' is enabled in a domain password policy.",
+      "category": "Identity Security",
+      "module": "Password Security",
+      "severity": "High",
+      "condition": "pwdProperties has DOMAIN_PASSWORD_STORE_CLEARTEXT (16) / msDS-PasswordReversibleEncryptionEnabled is true.",
+      "risk": "Reversible encryption is essentially equivalent to storing passwords in plain text; anyone able to read the directory database can recover them.",
+      "recommendation": "Disable reversible encryption unless an application strictly requires it, and have users reset their passwords afterwards so that the stored value is no longer reversible.",
+      "references": [
+        "windows-security-baseline",
+        "ad-schema-pwdproperties"
+      ],
+      "dataset": "password-policies",
+      "scope": {
+        "field": "ReversibleEncryptionEnabled",
+        "op": "notNull"
+      },
+      "where": {
+        "field": "ReversibleEncryptionEnabled",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "PolicyName",
+        "kind": "Policy",
+        "domain": "Domain"
+      },
+      "evidenceSource": "LDAP: pwdProperties / msDS-PasswordReversibleEncryptionEnabled",
+      "evidence": [
+        {
+          "property": "ReversibleEncryptionEnabled",
+          "label": "Reversible encryption",
+          "expected": "False"
+        },
+        {
+          "property": "PwdProperties",
+          "label": "pwdProperties"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-PWD-004",
+      "title": "Account lockout threshold is not configured",
+      "description": "The account lockout threshold is 0, so accounts are never locked after failed logon attempts.",
+      "category": "Authentication",
+      "module": "Password Security",
+      "severity": "Medium",
+      "condition": "lockoutThreshold equals 0.",
+      "risk": "Without lockout, passwords can be guessed by unlimited online attempts (brute force or password spraying).",
+      "recommendation": "Define an account lockout threshold balanced against denial-of-service risk, following the Microsoft guidance for the lockout threshold policy.",
+      "references": [
+        "account-lockout-threshold",
+        "windows-security-baseline"
+      ],
+      "dataset": "password-policies",
+      "scope": {
+        "field": "LockoutThreshold",
+        "op": "notNull"
+      },
+      "where": {
+        "field": "LockoutThreshold",
+        "op": "eq",
+        "value": 0
+      },
+      "affected": {
+        "name": "PolicyName",
+        "kind": "Policy",
+        "domain": "Domain"
+      },
+      "evidenceSource": "LDAP: lockoutThreshold / msDS-LockoutThreshold",
+      "evidence": [
+        {
+          "property": "LockoutThreshold",
+          "label": "Lockout threshold",
+          "expected": "> 0"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-PWD-005",
+      "title": "Account lockout duration shorter than the configured baseline",
+      "description": "The lockout duration is shorter than {MinLockoutDurationMinutes} minutes, the value used by the Microsoft Windows security baseline.",
+      "category": "Authentication",
+      "module": "Password Security",
+      "severity": "Low",
+      "condition": "Lockout threshold > 0, lockout is not 'until administrator unlocks' and lockoutDuration is lower than {MinLockoutDurationMinutes} minutes.",
+      "risk": "A short lockout duration lets an attacker resume guessing quickly after each lockout.",
+      "recommendation": "Increase the account lockout duration to meet the baseline, or use a value defined by your security policy. The baseline value is configurable in config/settings.json.",
+      "references": [
+        "windows-security-baseline",
+        "account-lockout-threshold"
+      ],
+      "dataset": "password-policies",
+      "scope": {
+        "all": [
+          {
+            "field": "LockoutThreshold",
+            "op": "gt",
+            "value": 0
+          },
+          {
+            "field": "LockoutUntilAdminUnlock",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "field": "LockoutDurationMinutes",
+            "op": "notNull"
+          }
+        ]
+      },
+      "where": {
+        "field": "LockoutDurationMinutes",
+        "op": "lt",
+        "valueSetting": "MinLockoutDurationMinutes"
+      },
+      "affected": {
+        "name": "PolicyName",
+        "kind": "Policy",
+        "domain": "Domain"
+      },
+      "evidenceSource": "LDAP: lockoutDuration / msDS-LockoutDuration",
+      "evidence": [
+        {
+          "property": "LockoutDurationMinutes",
+          "label": "Lockout duration (minutes)",
+          "expected": ">= {MinLockoutDurationMinutes}"
+        },
+        {
+          "property": "LockoutThreshold",
+          "label": "Lockout threshold"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-PWD-006",
+      "title": "Enabled account with 'password not required'",
+      "description": "An enabled user account has the PASSWD_NOTREQD flag (0x20) set in userAccountControl, which allows it to have an empty password regardless of the password policy.",
+      "category": "Identity Security",
+      "module": "Password Security",
+      "severity": "High",
+      "condition": "Enabled user where userAccountControl has PASSWD_NOTREQD (0x20).",
+      "risk": "The account may have no password, or one that does not satisfy the policy, and can be used without meaningful authentication.",
+      "recommendation": "Clear the 'Password not required' flag and ensure the account has a password that complies with the policy; validate the account's purpose first.",
+      "references": [
+        "uac-flags",
+        "windows-security-baseline"
+      ],
+      "dataset": "users",
+      "scope": {
+        "field": "Enabled",
+        "op": "eq",
+        "value": true
+      },
+      "where": {
+        "field": "PasswordNotRequired",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "SamAccountName",
+        "kind": "User",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: userAccountControl",
+      "evidence": [
+        {
+          "property": "UserAccountControl",
+          "label": "userAccountControl",
+          "format": "hex",
+          "expected": "PASSWD_NOTREQD (0x20) not set"
+        },
+        {
+          "property": "PasswordLastSet",
+          "label": "pwdLastSet"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-PWD-007",
+      "title": "Enabled account allows reversible password encryption",
+      "description": "An enabled user account has the ENCRYPTED_TEXT_PWD_ALLOWED flag (0x80) set, so its password is stored with reversible encryption.",
+      "category": "Identity Security",
+      "module": "Password Security",
+      "severity": "High",
+      "condition": "Enabled user where userAccountControl has ENCRYPTED_TEXT_PWD_ALLOWED (0x80).",
+      "risk": "Reversible encryption makes it possible to recover the password from the directory database.",
+      "recommendation": "Clear the flag unless an application demonstrably requires it and have the user reset the password afterwards.",
+      "references": [
+        "uac-flags",
+        "ad-schema-pwdproperties"
+      ],
+      "dataset": "users",
+      "scope": {
+        "field": "Enabled",
+        "op": "eq",
+        "value": true
+      },
+      "where": {
+        "field": "ReversibleEncryption",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "SamAccountName",
+        "kind": "User",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: userAccountControl",
+      "evidence": [
+        {
+          "property": "UserAccountControl",
+          "label": "userAccountControl",
+          "format": "hex",
+          "expected": "ENCRYPTED_TEXT_PWD_ALLOWED (0x80) not set"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-USER-001",
+      "title": "Stale enabled user accounts",
+      "description": "Enabled non-privileged user accounts that have not logged on for more than {StaleAccountDays} days (lastLogonTimestamp, or whenCreated when the account never logged on).",
+      "category": "Identity Security",
+      "module": "Users and Groups",
+      "severity": "Low",
+      "condition": "Enabled non-privileged user inactive for more than {StaleAccountDays} days.",
+      "risk": "Unused accounts increase the attack surface and are rarely monitored; they can be abused for long periods without detection.",
+      "recommendation": "Confirm with the owners, then disable and later remove accounts that are no longer needed, following the organization's lifecycle process. Note that lastLogonTimestamp is only updated periodically (14 days by default).",
+      "references": [
+        "stale-accounts",
+        "last-logon-timestamp"
+      ],
+      "dataset": "users",
+      "scope": {
+        "all": [
+          {
+            "field": "Enabled",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "IsPrivileged",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      },
+      "where": {
+        "field": "IsStale",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "SamAccountName",
+        "kind": "User",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: lastLogonTimestamp / whenCreated",
+      "evidence": [
+        {
+          "property": "DaysSinceLastLogon",
+          "label": "Days since last logon",
+          "expected": "<= {StaleAccountDays}"
+        },
+        {
+          "property": "LastLogonTimestamp",
+          "label": "lastLogonTimestamp"
+        },
+        {
+          "property": "WhenCreated",
+          "label": "whenCreated"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-KRB-001",
+      "title": "krbtgt password older than the configured threshold",
+      "description": "The password of the krbtgt account (the key that protects all Kerberos tickets in the domain) has not been changed for more than {KrbtgtMaxPasswordAgeDays} days.",
+      "category": "Authentication",
+      "module": "Kerberos",
+      "severity": "High",
+      "condition": "krbtgt pwdLastSet older than {KrbtgtMaxPasswordAgeDays} days.",
+      "risk": "If the krbtgt key was ever exposed, an attacker can forge tickets (Golden Ticket) until the password is reset twice.",
+      "recommendation": "Plan a krbtgt password reset following the Microsoft guidance (reset twice, with a replication interval between resets) and make it part of a regular process.",
+      "references": [
+        "krbtgt-reset",
+        "default-accounts-krbtgt",
+        "mdi-accounts-assessments"
+      ],
+      "dataset": "users",
+      "scope": {
+        "field": "IsKrbtgt",
+        "op": "eq",
+        "value": true
+      },
+      "where": {
+        "field": "PasswordAgeDays",
+        "op": "gt",
+        "valueSetting": "KrbtgtMaxPasswordAgeDays"
+      },
+      "affected": {
+        "name": "SamAccountName",
+        "kind": "User",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: krbtgt pwdLastSet",
+      "evidence": [
+        {
+          "property": "PasswordAgeDays",
+          "label": "Password age (days)",
+          "expected": "<= {KrbtgtMaxPasswordAgeDays}"
+        },
+        {
+          "property": "PasswordLastSet",
+          "label": "pwdLastSet"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-KRB-002",
+      "title": "Computer account with unconstrained Kerberos delegation (non-DC)",
+      "description": "An enabled computer account that is not a domain controller is trusted for delegation (TRUSTED_FOR_DELEGATION).",
+      "category": "Authentication",
+      "module": "Kerberos",
+      "severity": "High",
+      "condition": "Enabled non-DC computer where userAccountControl has TRUSTED_FOR_DELEGATION (0x80000).",
+      "risk": "With unconstrained delegation the server stores the TGT of users that authenticate to it. Compromising the server allows impersonation of those users, including privileged ones.",
+      "recommendation": "Replace unconstrained delegation with constrained delegation or resource-based constrained delegation, and mark privileged accounts as 'sensitive and cannot be delegated' or add them to Protected Users.",
+      "references": [
+        "credential-guard-delegation",
+        "uac-flags"
+      ],
+      "dataset": "computers",
+      "scope": {
+        "all": [
+          {
+            "field": "Enabled",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "IsDomainController",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      },
+      "where": {
+        "field": "TrustedForDelegation",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "Name",
+        "kind": "Computer",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: userAccountControl",
+      "evidence": [
+        {
+          "property": "UserAccountControl",
+          "label": "userAccountControl",
+          "format": "hex",
+          "expected": "TRUSTED_FOR_DELEGATION (0x80000) not set"
+        },
+        {
+          "property": "OperatingSystem",
+          "label": "Operating system"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-KRB-003",
+      "title": "User account with unconstrained Kerberos delegation",
+      "description": "An enabled non-privileged user account is trusted for delegation (TRUSTED_FOR_DELEGATION). Privileged accounts are reported by AD-PRIV-006.",
+      "category": "Authentication",
+      "module": "Kerberos",
+      "severity": "High",
+      "condition": "Enabled non-privileged user where userAccountControl has TRUSTED_FOR_DELEGATION (0x80000).",
+      "risk": "Service accounts with unconstrained delegation can be used to capture the TGTs of users that connect to the service.",
+      "recommendation": "Use constrained delegation or resource-based constrained delegation instead, and review which services depend on the delegation.",
+      "references": [
+        "credential-guard-delegation",
+        "uac-flags"
+      ],
+      "dataset": "users",
+      "scope": {
+        "all": [
+          {
+            "field": "Enabled",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "IsPrivileged",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      },
+      "where": {
+        "field": "TrustedForDelegation",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "SamAccountName",
+        "kind": "User",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: userAccountControl",
+      "evidence": [
+        {
+          "property": "UserAccountControl",
+          "label": "userAccountControl",
+          "format": "hex",
+          "expected": "TRUSTED_FOR_DELEGATION (0x80000) not set"
+        },
+        {
+          "property": "ServicePrincipalNames",
+          "label": "servicePrincipalName"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-KRB-004",
+      "title": "Account does not require Kerberos pre-authentication",
+      "description": "An enabled user account has DONT_REQ_PREAUTH (0x400000) set, so a Kerberos AS-REP can be requested without proving knowledge of the password.",
+      "category": "Authentication",
+      "module": "Kerberos",
+      "severity": "High",
+      "condition": "Enabled user where userAccountControl has DONT_REQ_PREAUTH (0x400000).",
+      "risk": "Any party that can reach a domain controller can request encrypted material for the account and attempt to crack the password offline (AS-REP roasting).",
+      "recommendation": "Clear the 'Do not require Kerberos preauthentication' option unless required by a legacy application; if it must stay, use a long, random password.",
+      "references": [
+        "uac-flags",
+        "mdi-accounts-assessments"
+      ],
+      "dataset": "users",
+      "scope": {
+        "field": "Enabled",
+        "op": "eq",
+        "value": true
+      },
+      "where": {
+        "field": "DoesNotRequirePreAuth",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "SamAccountName",
+        "kind": "User",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: userAccountControl",
+      "evidence": [
+        {
+          "property": "UserAccountControl",
+          "label": "userAccountControl",
+          "format": "hex",
+          "expected": "DONT_REQ_PREAUTH (0x400000) not set"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-KRB-005",
+      "title": "Account restricted to DES-only Kerberos encryption",
+      "description": "An enabled user account has USE_DES_KEY_ONLY (0x200000) set in userAccountControl.",
+      "category": "Authentication",
+      "module": "Legacy Configurations",
+      "severity": "Medium",
+      "condition": "Enabled user where userAccountControl has USE_DES_KEY_ONLY (0x200000).",
+      "risk": "The flag restricts the account to legacy DES encryption types, a weak configuration that may also fail with current Windows versions.",
+      "recommendation": "Clear the flag and, if an application requires it, update or replace the application so that it supports modern Kerberos encryption types.",
+      "references": [
+        "uac-flags",
+        "kerberos-rc4"
+      ],
+      "dataset": "users",
+      "scope": {
+        "field": "Enabled",
+        "op": "eq",
+        "value": true
+      },
+      "where": {
+        "field": "UseDesKeyOnly",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "SamAccountName",
+        "kind": "User",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: userAccountControl",
+      "evidence": [
+        {
+          "property": "UserAccountControl",
+          "label": "userAccountControl",
+          "format": "hex",
+          "expected": "USE_DES_KEY_ONLY (0x200000) not set"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-SVC-001",
+      "title": "Non-privileged user accounts with SPNs (Kerberoastable)",
+      "description": "Enabled non-privileged user accounts with servicePrincipalName values are probably service accounts. Their service tickets can be requested by any authenticated user and attacked offline. Managed service accounts (gMSA) avoid this because their passwords are long, random and rotated automatically.",
+      "category": "Identity Security",
+      "module": "Service Accounts / gMSA",
+      "severity": "Low",
+      "condition": "Enabled non-privileged, non-krbtgt user with servicePrincipalName count greater than 0.",
+      "risk": "A weak or old service-account password can be recovered offline from a service ticket and reused.",
+      "recommendation": "Migrate services to group Managed Service Accounts where supported; otherwise use long random passwords and rotate them regularly.",
+      "references": [
+        "service-accounts",
+        "gmsa-overview",
+        "gmsa-secure"
+      ],
+      "dataset": "users",
+      "scope": {
+        "all": [
+          {
+            "field": "Enabled",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "IsPrivileged",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "field": "IsKrbtgt",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      },
+      "where": {
+        "field": "HasSpn",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "SamAccountName",
+        "kind": "User",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: servicePrincipalName",
+      "evidence": [
+        {
+          "property": "ServicePrincipalNames",
+          "label": "servicePrincipalName"
+        },
+        {
+          "property": "PasswordAgeDays",
+          "label": "Password age (days)"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-COMP-003",
+      "title": "Stale enabled computer accounts",
+      "description": "Enabled non-DC computer accounts that have not logged on for more than {StaleAccountDays} days (lastLogonTimestamp, or whenCreated when never logged on).",
+      "category": "Identity Security",
+      "module": "Users and Groups",
+      "severity": "Low",
+      "condition": "Enabled non-DC computer inactive for more than {StaleAccountDays} days.",
+      "risk": "Abandoned computer accounts remain valid identities in the domain and can be reused by an attacker that obtains their secret.",
+      "recommendation": "Verify whether the computers still exist, then disable and later delete stale computer accounts according to the organization's lifecycle process.",
+      "references": [
+        "stale-accounts",
+        "last-logon-timestamp"
+      ],
+      "dataset": "computers",
+      "scope": {
+        "all": [
+          {
+            "field": "Enabled",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "IsDomainController",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      },
+      "where": {
+        "field": "IsStale",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "Name",
+        "kind": "Computer",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: lastLogonTimestamp / whenCreated",
+      "evidence": [
+        {
+          "property": "DaysSinceLastLogon",
+          "label": "Days since last logon",
+          "expected": "<= {StaleAccountDays}"
+        },
+        {
+          "property": "LastLogonTimestamp",
+          "label": "lastLogonTimestamp"
+        },
+        {
+          "property": "OperatingSystem",
+          "label": "Operating system"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-LAPS-001",
+      "title": "LAPS schema extensions not present",
+      "description": "Neither the Windows LAPS nor the legacy Microsoft LAPS schema attributes were found, so the directory cannot store managed local administrator passwords.",
+      "category": "Identity Security",
+      "module": "Windows LAPS",
+      "severity": "Medium",
+      "condition": "Schema contains neither msLAPS-* nor ms-Mcs-AdmPwd* attributes.",
+      "risk": "Without LAPS, local administrator passwords are usually shared across machines, which allows lateral movement after a single compromise.",
+      "recommendation": "Evaluate deploying Windows LAPS: extend the schema, configure the policy and delegate password read permissions according to the Microsoft documentation.",
+      "references": [
+        "laps-overview",
+        "laps-schema"
+      ],
+      "dataset": "laps-info",
+      "where": {
+        "field": "SchemaExtended",
+        "op": "eq",
+        "value": false
+      },
+      "affected": {
+        "name": "Domain",
+        "kind": "Domain"
+      },
+      "evidenceSource": "LDAP: schema (attributeSchema lookup)",
+      "evidence": [
+        {
+          "property": "WindowsLapsSchemaPresent",
+          "label": "Windows LAPS schema",
+          "expected": "True"
+        },
+        {
+          "property": "LegacyLapsSchemaPresent",
+          "label": "Legacy LAPS schema"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-ATK-001",
+      "title": "Users can join computers to the domain (ms-DS-MachineAccountQuota > 0)",
+      "description": "The ms-DS-MachineAccountQuota attribute of the domain is greater than 0 (default 10), which lets authenticated users create computer accounts.",
+      "category": "Identity Security",
+      "module": "Identity Attack Surface",
+      "severity": "Medium",
+      "condition": "ms-DS-MachineAccountQuota greater than 0.",
+      "risk": "Any authenticated user can create computer accounts that may be abused in relay and delegation attacks, and domain joins are performed outside of any controlled process.",
+      "recommendation": "Set the quota to 0 and delegate the 'create computer objects' permission to the accounts or groups that perform domain joins. Validate existing join processes first.",
+      "references": [
+        "machine-account-quota",
+        "domain-join-permissions"
+      ],
+      "dataset": "domains",
+      "scope": {
+        "field": "MachineAccountQuota",
+        "op": "notNull"
+      },
+      "where": {
+        "field": "MachineAccountQuota",
+        "op": "gt",
+        "value": 0
+      },
+      "affected": {
+        "name": "Name",
+        "kind": "Domain",
+        "domain": "Name",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: domain head (ms-DS-MachineAccountQuota)",
+      "evidence": [
+        {
+          "property": "MachineAccountQuota",
+          "label": "ms-DS-MachineAccountQuota",
+          "expected": "0"
+        }
+      ]
+    }
+  ]
+}

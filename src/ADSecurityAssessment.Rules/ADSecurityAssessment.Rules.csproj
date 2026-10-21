@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(AdsTfm)</TargetFramework>
+    <RootNamespace>ADSecurityAssessment.Rules</RootNamespace>
+    <AssemblyName>ADSecurityAssessment.Rules</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ADSecurityAssessment.Core\ADSecurityAssessment.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Regras JSON embutidas como padrão; a pasta rules/ ao lado do .exe tem prioridade quando contém regras. -->
+    <EmbeddedResource Include="..\..\rules\*.rules.json" LogicalName="rules/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ADSecurityAssessment.Tests" />
+  </ItemGroup>
+</Project>

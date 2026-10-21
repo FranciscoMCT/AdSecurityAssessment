@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "ruleId": "AD-PRIV-001",
+      "title": "Privileged account with PasswordNeverExpires",
+      "description": "An enabled account that is a member (direct or nested) of a privileged group has the DONT_EXPIRE_PASSWORD bit set in userAccountControl.",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "High",
+      "condition": "Enabled privileged user where userAccountControl has DONT_EXPIRE_PASSWORD (0x10000).",
+      "risk": "A credential with the highest privileges that never has to change is exposed for an unlimited time after any leak, and stolen hashes or tickets derived from it stay useful indefinitely.",
+      "recommendation": "Remove the 'Password never expires' option from the account (or replace it with an account type designed for non-expiring secrets, such as a gMSA, when it is a service identity) and apply a password rotation process for privileged accounts. Validate application impact before changing the account.",
+      "references": ["priv-groups-appendix-b", "protected-accounts-appendix-c", "uac-flags"],
+      "dataset": "users",
+      "scope": { "all": [ { "field": "IsPrivileged", "op": "eq", "value": true }, { "field": "Enabled", "op": "eq", "value": true } ] },
+      "where": { "field": "PasswordNeverExpires", "op": "eq", "value": true },
+      "affected": { "name": "SamAccountName", "kind": "User", "domain": "Domain", "dn": "DistinguishedName" },
+      "evidenceSource": "LDAP: userAccountControl + privileged group membership",
+      "evidence": [
+        { "property": "UserAccountControl", "label": "userAccountControl", "format": "hex", "expected": "DONT_EXPIRE_PASSWORD (0x10000) not set" },
+        { "property": "PrivilegedGroups", "label": "Privileged groups" },
+        { "property": "PasswordLastSet", "label": "pwdLastSet" }
+      ]
+    },
+    {
+      "ruleId": "AD-PRIV-002",
+      "title": "Disabled account that is still a member of a privileged group",
+      "description": "A disabled user account remains a direct or nested member of a privileged group.",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "Low",
+      "condition": "Privileged user whose userAccountControl has ACCOUNTDISABLE (0x2).",
+      "risk": "Disabled privileged accounts expand the privileged membership list unnecessarily and can be re-enabled by anyone with account-management rights, instantly restoring their privileges.",
+      "recommendation": "Review whether the account is still needed. If not, remove it from the privileged groups (and delete it according to your lifecycle process) so that group membership reflects only active administrators.",
+      "references": ["priv-groups-appendix-b", "reduce-attack-surface"],
+      "dataset": "users",
+      "scope": { "field": "IsPrivileged", "op": "eq", "value": true },
+      "where": { "field": "Enabled", "op": "eq", "value": false },
+      "affected": { "name": "SamAccountName", "kind": "User", "domain": "Domain", "dn": "DistinguishedName" },
+      "evidenceSource": "LDAP: userAccountControl + privileged group membership",
+      "evidence": [
+        { "property": "UserAccountControl", "label": "userAccountControl", "format": "hex" },
+        { "property": "PrivilegedGroups", "label": "Privileged groups" }
+      ]
+    },
+    {
+      "ruleId": "AD-PRIV-003",
+      "title": "Stale privileged account (inactive beyond the configured threshold)",
+      "description": "An enabled privileged account has not logged on for more than {StaleAccountDays} days (lastLogonTimestamp, or whenCreated when the account never logged on). lastLogonTimestamp is only synchronized periodically (14 days by default), so the threshold is far larger than the replication lag.",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "Medium",
+      "condition": "Enabled privileged user inactive for more than {StaleAccountDays} days.",
+      "risk": "Forgotten privileged accounts are rarely monitored; compromise of one gives powerful access that nobody expects to be in use.",
+      "recommendation": "Confirm with the owner whether the account is still needed. Disable and then remove inactive privileged accounts according to the organization's lifecycle process.",
+      "references": ["stale-accounts", "last-logon-timestamp", "priv-groups-appendix-b"],
+      "dataset": "users",
+      "scope": { "all": [ { "field": "IsPrivileged", "op": "eq", "value": true }, { "field": "Enabled", "op": "eq", "value": true } ] },
+      "where": { "field": "IsStale", "op": "eq", "value": true },
+      "affected": { "name": "SamAccountName", "kind": "User", "domain": "Domain", "dn": "DistinguishedName" },
+      "evidenceSource": "LDAP: lastLogonTimestamp / whenCreated",
+      "evidence": [
+        { "property": "DaysSinceLastLogon", "label": "Days since last logon", "expected": "<= {StaleAccountDays}" },
+        { "property": "LastLogonTimestamp", "label": "lastLogonTimestamp" },
+        { "property": "PrivilegedGroups", "label": "Privileged groups" }
+      ]
+    },
+    {
+      "ruleId": "AD-PRIV-004",
+      "title": "Schema Admins group has members",
+      "description": "Microsoft recommends that the Schema Admins group stays empty and receives a member only temporarily while a schema change is performed.",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "Medium",
+      "condition": "Schema Admins has at least one member (direct or nested).",
+      "risk": "Schema modifications are forest-wide and effectively irreversible; permanent membership increases the number of identities able to make them.",
+      "recommendation": "Remove the permanent members of Schema Admins and add an account to the group only for the duration of an approved schema change.",
+      "references": ["schema-admins-empty", "priv-groups-appendix-b"],
+      "dataset": "privileged-memberships",
+      "where": { "field": "GroupKey", "op": "eq", "value": "SchemaAdmins" },
+      "affected": { "name": "Label", "kind": "Group", "domain": "Domain", "dn": "MemberDn" },
+      "evidenceSource": "LDAP: Schema Admins membership (member attribute, recursive)",
+      "evidence": [
+        { "property": "MemberName", "label": "Member", "expected": "Group empty" },
+        { "property": "IsDirect", "label": "Direct member" },
+        { "property": "ViaGroup", "label": "Via nested group" }
+      ]
+    },
+    {
+      "ruleId": "AD-PRIV-005",
+      "title": "Privileged account used as a service account (has SPNs)",
+      "description": "An enabled privileged user account has one or more servicePrincipalName values registered, meaning it can be targeted by Kerberoasting and is probably running a service.",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "High",
+      "condition": "Enabled privileged user with servicePrincipalName count greater than 0.",
+      "risk": "Any authenticated user can request a service ticket for an SPN and attempt to crack it offline; success yields the credentials of a privileged account. Service accounts also tend to have long-lived passwords and broad logon rights.",
+      "recommendation": "Run the service under a dedicated least-privilege account (preferably a gMSA) and remove the privileged group membership or the SPN from the account.",
+      "references": ["service-accounts", "gmsa-overview", "priv-groups-appendix-b"],
+      "dataset": "users",
+      "scope": { "all": [ { "field": "IsPrivileged", "op": "eq", "value": true }, { "field": "Enabled", "op": "eq", "value": true } ] },
+      "where": { "field": "HasSpn", "op": "eq", "value": true },
+      "affected": { "name": "SamAccountName", "kind": "User", "domain": "Domain", "dn": "DistinguishedName" },
+      "evidenceSource": "LDAP: servicePrincipalName",
+      "evidence": [
+        { "property": "ServicePrincipalNames", "label": "servicePrincipalName", "expected": "(none)" },
+        { "property": "PrivilegedGroups", "label": "Privileged groups" }
+      ]
+    },
+    {
+      "ruleId": "AD-PRIV-006",
+      "title": "Privileged account configured for Kerberos delegation",
+      "description": "An enabled privileged user account is trusted for delegation (unconstrained delegation or constrained delegation with protocol transition).",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "High",
+      "condition": "Enabled privileged user where userAccountControl has TRUSTED_FOR_DELEGATION (0x80000) or TRUSTED_TO_AUTH_FOR_DELEGATION (0x1000000).",
+      "risk": "Delegation allows a service to act on behalf of users; with a privileged identity, compromise of the delegated service can lead to impersonation of other accounts or credential theft.",
+      "recommendation": "Remove delegation from privileged accounts and review the services that rely on it. Where possible mark sensitive accounts as 'Account is sensitive and cannot be delegated' or add them to Protected Users, after assessing compatibility.",
+      "references": ["credential-guard-delegation", "protected-accounts-appendix-c", "uac-flags"],
+      "dataset": "users",
+      "scope": { "all": [ { "field": "IsPrivileged", "op": "eq", "value": true }, { "field": "Enabled", "op": "eq", "value": true } ] },
+      "where": { "any": [ { "field": "TrustedForDelegation", "op": "eq", "value": true }, { "field": "TrustedToAuthForDelegation", "op": "eq", "value": true } ] },
+      "affected": { "name": "SamAccountName", "kind": "User", "domain": "Domain", "dn": "DistinguishedName" },
+      "evidenceSource": "LDAP: userAccountControl",
+      "evidence": [
+        { "property": "UserAccountControl", "label": "userAccountControl", "format": "hex", "expected": "TRUSTED_FOR_DELEGATION / TRUSTED_TO_AUTH_FOR_DELEGATION not set" },
+        { "property": "TrustedForDelegation", "label": "Unconstrained delegation" },
+        { "property": "TrustedToAuthForDelegation", "label": "Protocol transition" }
+      ]
+    },
+    {
+      "ruleId": "AD-PRIV-007",
+      "title": "Privileged user account is not a member of Protected Users",
+      "description": "The Protected Users group exists in the domain, but an enabled privileged user account without SPNs is not a member of it. Accounts that run services or are used for delegation need compatibility review before being added.",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "Medium",
+      "condition": "Domain has the Protected Users group; enabled privileged user without SPN is not a member of Protected Users.",
+      "risk": "Protected Users enforces stronger credential protections (for example no NTLM, no DES/RC4 in Kerberos pre-authentication, no delegation, shorter TGT lifetime). Privileged accounts outside the group do not get these protections.",
+      "recommendation": "Evaluate adding human privileged accounts to Protected Users after testing, following the Microsoft guidance and limitations (not for computers or service accounts; DC-side protections require the Windows Server 2012 R2 domain functional level).",
+      "references": ["protected-users", "protected-accounts-appendix-c"],
+      "dataset": "users",
+      "scope": { "all": [
+        { "field": "IsPrivileged", "op": "eq", "value": true },
+        { "field": "Enabled", "op": "eq", "value": true },
+        { "field": "DomainHasProtectedUsersGroup", "op": "eq", "value": true },
+        { "field": "HasSpn", "op": "eq", "value": false } ] },
+      "where": { "field": "IsProtectedUsersMember", "op": "eq", "value": false },
+      "affected": { "name": "SamAccountName", "kind": "User", "domain": "Domain", "dn": "DistinguishedName" },
+      "evidenceSource": "LDAP: Protected Users membership",
+      "evidence": [
+        { "property": "IsProtectedUsersMember", "label": "Member of Protected Users", "expected": "True" },
+        { "property": "PrivilegedGroups", "label": "Privileged groups" }
+      ]
+    },
+    {
+      "ruleId": "AD-PRIV-008",
+      "title": "Direct members in Account, Server, Print or Backup Operators",
+      "description": "The Account Operators, Server Operators, Print Operators and Backup Operators built-in groups are privileged groups that should normally have no members.",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "Medium",
+      "condition": "A built-in operator group (Account, Server, Print, Backup Operators) has direct members.",
+      "risk": "These groups grant rights that can be used to escalate to full control of the domain or domain controllers (for example local logon to DCs, backup/restore privileges, account management).",
+      "recommendation": "Review each member, remove those that are not strictly required and use delegation of specific permissions (least privilege) instead of operator group membership.",
+      "references": ["engage-privileged-groups", "security-groups", "priv-groups-appendix-b"],
+      "dataset": "privileged-memberships",
+      "where": { "all": [
+        { "field": "GroupKey", "op": "in", "value": ["AccountOperators", "ServerOperators", "PrintOperators", "BackupOperators"] },
+        { "field": "IsDirect", "op": "eq", "value": true } ] },
+      "affected": { "name": "Label", "kind": "Group", "domain": "Domain", "dn": "MemberDn" },
+      "evidenceSource": "LDAP: built-in operator groups membership",
+      "evidence": [
+        { "property": "GroupName", "label": "Group", "expected": "No members" },
+        { "property": "MemberName", "label": "Member" },
+        { "property": "MemberClass", "label": "Member class" }
+      ]
+    },
+    {
+      "ruleId": "AD-PRIV-009",
+      "title": "Nested membership in a privileged group",
+      "description": "An account obtains privileged group membership indirectly through nested groups, which makes the effective privileged population harder to review.",
+      "category": "Privileged Access",
+      "module": "Privileged Accounts",
+      "severity": "Low",
+      "condition": "Membership discovered only through nested groups (recursive expansion of the member attribute) in a privileged group other than Protected Users.",
+      "risk": "Nested groups hide who really holds privileged rights; changes to a nested group silently change the privileged population.",
+      "recommendation": "Review the nested groups listed as the path, flatten or remove unnecessary nesting and keep privileged groups populated with directly managed, named administrative accounts.",
+      "references": ["engage-privileged-groups", "reduce-attack-surface"],
+      "dataset": "privileged-memberships",
+      "where": { "all": [
+        { "field": "IsDirect", "op": "eq", "value": false },
+        { "field": "GroupKey", "op": "ne", "value": "ProtectedUsers" } ] },
+      "affected": { "name": "Label", "kind": "Group", "domain": "Domain", "dn": "MemberDn" },
+      "evidenceSource": "LDAP: recursive group membership (member attribute)",
+      "evidence": [
+        { "property": "GroupName", "label": "Privileged group" },
+        { "property": "MemberName", "label": "Effective member" },
+        { "property": "ViaGroup", "label": "Via nested group" }
+      ]
+    }
+  ]
+}

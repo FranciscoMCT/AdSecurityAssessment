@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <!-- TFM padrão: .NET 10 (LTS). Para compilar com outro SDK: dotnet build -p:AdsTfm=net8.0 -->
+    <AdsTfm Condition="'$(AdsTfm)' == ''">net10.0</AdsTfm>
+    <AdsDsPackageVersion Condition="'$(AdsDsPackageVersion)' == '' And '$(AdsTfm)' == 'net8.0'">8.0.0</AdsDsPackageVersion>
+    <AdsDsPackageVersion Condition="'$(AdsDsPackageVersion)' == ''">10.0.0</AdsDsPackageVersion>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CA1416;WPF0001</NoWarn>
+    <TreatWarningsAsErrors Condition="'$(AdsStrict)' == 'true'">true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+    <Version>1.0.0</Version>
+    <Company>AD Security Assessment</Company>
+    <Product>AD Security Assessment</Product>
+    <Copyright>Read-only assessment tool</Copyright>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+</Project>

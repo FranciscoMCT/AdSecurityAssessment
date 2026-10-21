@@ -1,0 +1,109 @@
+<UserControl x:Class="ADSecurityAssessment.App.Views.StartView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:ADSecurityAssessment.App.Views">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="1040" Margin="32,36,32,28">
+
+            <StackPanel Orientation="Horizontal">
+                <Path Data="{StaticResource ShieldGeometry}" Width="44" Height="44" Stretch="Uniform" Fill="{DynamicResource AccentBrush}"/>
+                <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Active Directory security assessment" Style="{StaticResource TitleText}"/>
+                    <TextBlock Text="Deterministic, evidence-based findings for Microsoft AD DS — collected locally, read-only." Style="{StaticResource MutedText}" Margin="0,4,0,0"/>
+                </StackPanel>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Margin="0,24,0,0" Padding="16,12" Background="{DynamicResource AccentSoftBrush}" BorderBrush="{DynamicResource AccentSoftBrush}">
+                <TextBlock Text="{Binding PrivacyStatement}" Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+            </Border>
+
+            <Border Margin="0,16,0,0" Padding="16,12" CornerRadius="8" Background="{DynamicResource ErrorBrush}"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource ErrorTextBrush}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"/>
+            </Border>
+
+            <Border Margin="0,16,0,0" Padding="16,12" CornerRadius="8" Background="{DynamicResource BannerBrush}"
+                    Visibility="{Binding HasRuleLoadErrors, Converter={StaticResource BoolToVis}}">
+                <TextBlock Foreground="{DynamicResource BannerTextBrush}" TextWrapping="Wrap"
+                           Text="Some rule definitions were rejected while loading (they are never executed). See the log for details."/>
+            </Border>
+
+            <Grid Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Analyze Current Domain" Style="{StaticResource SectionText}" FontSize="18"/>
+                        <TextBlock Style="{StaticResource BodyText}"
+                                   Text="Uses your current Windows sign-in (integrated authentication) and the domain of this computer. Nothing is typed or stored."/>
+                        <TextBlock Style="{StaticResource MutedText}" Margin="0,12,0,0"
+                                   Text="A standard domain user can read most of what is assessed. Anything that needs additional read permission is reported as Not evaluated, never as compliant."/>
+                        <Button Style="{StaticResource AccentButton}" Margin="0,24,0,0" HorizontalAlignment="Left"
+                                Content="Analyze Current Domain" Command="{Binding AnalyzeCurrentCommand}"
+                                AutomationProperties.Name="Analyze Current Domain"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Connect to Domain" Style="{StaticResource SectionText}" FontSize="18"/>
+
+                        <TextBlock Text="Domain (DNS name)" Style="{StaticResource LabelText}" Margin="0,4,0,4"/>
+                        <TextBox Text="{Binding ConnectDomain, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Domain" Padding="8,6"/>
+
+                        <TextBlock Text="Domain controller (optional)" Style="{StaticResource LabelText}"/>
+                        <TextBox Text="{Binding ConnectController, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Domain controller" Padding="8,6"/>
+
+                        <TextBlock Text="Username (optional — empty = current Windows sign-in)" Style="{StaticResource LabelText}"/>
+                        <TextBox Text="{Binding ConnectUsername, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Username" Padding="8,6"/>
+
+                        <TextBlock Text="Password (kept in memory only for this run, never stored)" Style="{StaticResource LabelText}"/>
+                        <PasswordBox x:Name="PasswordInput" Padding="8,6" AutomationProperties.Name="Password"/>
+
+                        <Button Style="{StaticResource AccentButton}" Margin="0,20,0,0" HorizontalAlignment="Left"
+                                Content="Connect and analyze" Command="{Binding ConnectCommand}"
+                                AutomationProperties.Name="Connect to Domain"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0" Padding="20,14">
+                <StackPanel>
+                    <TextBlock Text="Report" Style="{StaticResource SectionText}" FontSize="18"/>
+                    <TextBlock Text="Folder where the report (HTML, JSON and CSV) is saved" Style="{StaticResource LabelText}" Margin="0,4,0,4"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding ReportFolder, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Report folder" Padding="8,6"/>
+                        <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Margin="12,0,0,0" Content="Browse…"
+                                Command="{Binding BrowseReportFolderCommand}" AutomationProperties.Name="Browse for report folder"/>
+                    </Grid>
+                    <CheckBox Margin="0,12,0,0" IsChecked="{Binding AutoExport}" Foreground="{DynamicResource TextBrush}"
+                              Content="Save the report automatically when the analysis finishes (a sensitive-data notice is shown first)"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0" Padding="20,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="No Active Directory at hand?" FontWeight="SemiBold"/>
+                        <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0"
+                                   Text="Demo Mode runs the same rules on fictitious data clearly marked DEMO DATA. It never touches a directory and is never mixed with real results."/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource SecondaryButton}" Margin="16,0,0,0" VerticalAlignment="Center"
+                            Content="Run Demo Mode" Command="{Binding DemoCommand}"/>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

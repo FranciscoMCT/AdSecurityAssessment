@@ -1,0 +1,36 @@
+{
+  "SeverityWeights": {
+    "Critical": 10,
+    "High": 7,
+    "Medium": 4,
+    "Low": 1,
+    "Informational": 0
+  },
+  "ScoreCaps": {
+    "Critical": 59,
+    "High": 79
+  },
+  "MinimumCoveragePercent": 50,
+  "RatingBands": [
+    {
+      "MinScore": 90,
+      "Label": "Strong"
+    },
+    {
+      "MinScore": 75,
+      "Label": "Good"
+    },
+    {
+      "MinScore": 60,
+      "Label": "Fair"
+    },
+    {
+      "MinScore": 40,
+      "Label": "Weak"
+    },
+    {
+      "MinScore": 0,
+      "Label": "Poor"
+    }
+  ]
+}

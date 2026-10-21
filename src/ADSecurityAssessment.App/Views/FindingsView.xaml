@@ -1,0 +1,271 @@
+<UserControl x:Class="ADSecurityAssessment.App.Views.FindingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:ADSecurityAssessment.App.Views">
+    <Grid Margin="28,24,28,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Findings" Style="{StaticResource TitleText}"/>
+
+        <!-- Filtros -->
+        <Grid Grid.Row="1" Margin="0,16,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="220"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid>
+                <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="10,7" AutomationProperties.Name="Search findings"/>
+                <TextBlock Text="Search by rule, title, object or category…" Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                <TextBlock Text="Severity" FontSize="11" Style="{StaticResource MutedText}"/>
+                <ComboBox ItemsSource="{Binding Severities}" SelectedItem="{Binding SelectedSeverity}" MinWidth="120" AutomationProperties.Name="Filter by severity"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Margin="12,0,0,0">
+                <TextBlock Text="Category" FontSize="11" Style="{StaticResource MutedText}"/>
+                <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" MinWidth="190" AutomationProperties.Name="Filter by category"/>
+            </StackPanel>
+            <StackPanel Grid.Column="3" Margin="12,0,0,0">
+                <TextBlock Text="Sort by" FontSize="11" Style="{StaticResource MutedText}"/>
+                <ComboBox ItemsSource="{Binding Sorts}" SelectedItem="{Binding SelectedSort}" MinWidth="140" AutomationProperties.Name="Sort findings"/>
+            </StackPanel>
+            <TextBlock Grid.Column="4" Text="{Binding CountText}" Style="{StaticResource MutedText}" VerticalAlignment="Bottom" Margin="16,0,0,6"/>
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="420" MinWidth="300"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Lista -->
+            <Grid>
+                <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected, Mode=TwoWay}" ItemContainerStyle="{StaticResource ListItem}"
+                         Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         AutomationProperties.Name="Findings list">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="5"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border CornerRadius="5,0,0,5" Background="{Binding Severity, Converter={StaticResource SeverityBrush}}"/>
+                                <Grid Grid.Column="1" Margin="12,10,12,10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Grid.Column="1" Margin="10,0,0,0" Foreground="{DynamicResource MutedBrush}" FontSize="12" VerticalAlignment="Top">
+                                        <Run Text="{Binding AffectedCount, Mode=OneWay}"/><Run Text=" obj."/>
+                                    </TextBlock>
+                                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding SeverityName, Mode=OneWay}" FontWeight="SemiBold"/><Run Text=" · "/><Run Text="{Binding RuleId, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Category, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </Grid>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="No findings match the current filters." Style="{StaticResource MutedText}" Margin="12" VerticalAlignment="Top"
+                           Visibility="{Binding HasItems, Converter={StaticResource BoolToCollapsed}}"/>
+            </Grid>
+
+            <!-- Detalhes -->
+            <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0">
+                <Grid>
+                    <TextBlock Text="Select a finding to see its details." Style="{StaticResource MutedText}" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Visibility="{Binding HasSelection, Converter={StaticResource BoolToCollapsed}}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" views:ScrollForwarding.Enabled="True"
+                                  Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                        <StackPanel DataContext="{Binding Selected}" Margin="24,20,24,24">
+
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource Badge}" Background="{Binding Severity, Converter={StaticResource SeverityBrush}}">
+                                    <TextBlock Text="{Binding SeverityName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                                </Border>
+                                <TextBlock Text="{Binding RuleId}" FontFamily="{StaticResource MonoFont}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                            <TextBlock Style="{StaticResource MutedText}" Margin="0,4,0,0">
+                                <Run Text="{Binding Category, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Module, Mode=OneWay}"/>
+                            </TextBlock>
+
+                            <TextBlock Text="Description" Style="{StaticResource LabelText}" Margin="0,18,0,4"/>
+                            <TextBlock Text="{Binding Description}" Style="{StaticResource BodyText}"/>
+
+                            <TextBlock Text="Detection condition" Style="{StaticResource LabelText}"/>
+                            <TextBlock Text="{Binding Condition}" Style="{StaticResource BodyText}"/>
+
+                            <TextBlock Text="Risk" Style="{StaticResource LabelText}"/>
+                            <TextBlock Text="{Binding Risk}" Style="{StaticResource BodyText}"/>
+
+                            <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="16,12" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Recommendation" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="{Binding Recommendation}" Style="{StaticResource BodyText}" Margin="0,6,0,0"/>
+                                    <TextBlock Text="This tool never applies changes. Review and apply remediation through your own change process." Style="{StaticResource MutedText}" FontSize="12" Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel Visibility="{Binding Notes, Converter={StaticResource NullToVis}}">
+                                <TextBlock Text="Notes" Style="{StaticResource LabelText}" Margin="0,16,0,4"/>
+                                <TextBlock Text="{Binding Notes}" Style="{StaticResource BodyText}"/>
+                            </StackPanel>
+
+                            <!-- Objetos afetados -->
+                            <TextBlock Style="{StaticResource SectionText}" Margin="0,22,0,8">
+                                <Run Text="Affected objects ("/><Run Text="{Binding AffectedCount, Mode=OneWay}"/><Run Text=")"/>
+                            </TextBlock>
+                            <Border Style="{StaticResource TableFrame}">
+                                <StackPanel>
+                                    <Border Style="{StaticResource TableHeadRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="170"/>
+                                                <ColumnDefinition Width="90"/>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Name" Style="{StaticResource TableHead}"/>
+                                            <TextBlock Grid.Column="1" Text="Type" Style="{StaticResource TableHead}"/>
+                                            <TextBlock Grid.Column="2" Text="Domain" Style="{StaticResource TableHead}"/>
+                                            <TextBlock Grid.Column="3" Text="Distinguished name" Style="{StaticResource TableHead}"/>
+                                        </Grid>
+                                    </Border>
+                                    <ItemsControl ItemsSource="{Binding Affected}" MaxHeight="300">
+                                        <ItemsControl.Template>
+                                            <ControlTemplate TargetType="ItemsControl">
+                                                <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False" CanContentScroll="True">
+                                                    <ItemsPresenter/>
+                                                </ScrollViewer>
+                                            </ControlTemplate>
+                                        </ItemsControl.Template>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><VirtualizingStackPanel/></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource TableRow}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="170"/>
+                                                            <ColumnDefinition Width="90"/>
+                                                            <ColumnDefinition Width="140"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource TableCell}" FontWeight="SemiBold"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Kind}" Style="{StaticResource TableCellMuted}"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding Domain}" Style="{StaticResource TableCellMuted}"/>
+                                                        <TextBlock Grid.Column="3" Text="{Binding DistinguishedName}" Style="{StaticResource TableCellMuted}" FontFamily="{StaticResource MonoFont}" FontSize="12"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Evidências -->
+                            <TextBlock Style="{StaticResource SectionText}" Margin="0,22,0,8">
+                                <Run Text="Evidence ("/><Run Text="{Binding EvidenceCount, Mode=OneWay}"/><Run Text=")"/>
+                            </TextBlock>
+                            <Border Style="{StaticResource TableFrame}">
+                                <StackPanel>
+                                    <Border Style="{StaticResource TableHeadRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="140"/>
+                                                <ColumnDefinition Width="150"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="Object" Style="{StaticResource TableHead}"/>
+                                            <TextBlock Grid.Column="1" Text="Property" Style="{StaticResource TableHead}"/>
+                                            <TextBlock Grid.Column="2" Text="Observed value" Style="{StaticResource TableHead}"/>
+                                            <TextBlock Grid.Column="3" Text="Expected" Style="{StaticResource TableHead}"/>
+                                            <TextBlock Grid.Column="4" Text="Source · collected" Style="{StaticResource TableHead}"/>
+                                        </Grid>
+                                    </Border>
+                                    <ItemsControl ItemsSource="{Binding Evidence}" MaxHeight="300">
+                                        <ItemsControl.Template>
+                                            <ControlTemplate TargetType="ItemsControl">
+                                                <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False" CanContentScroll="True">
+                                                    <ItemsPresenter/>
+                                                </ScrollViewer>
+                                            </ControlTemplate>
+                                        </ItemsControl.Template>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><VirtualizingStackPanel/></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource TableRow}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="150"/>
+                                                            <ColumnDefinition Width="140"/>
+                                                            <ColumnDefinition Width="150"/>
+                                                            <ColumnDefinition Width="110"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Object}" Style="{StaticResource TableCell}" FontWeight="SemiBold"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Property}" Style="{StaticResource TableCell}" FontFamily="{StaticResource MonoFont}" FontSize="12"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding Value}" Style="{StaticResource TableCell}" FontFamily="{StaticResource MonoFont}" FontSize="12"/>
+                                                        <TextBlock Grid.Column="3" Text="{Binding Expected}" Style="{StaticResource TableCellMuted}" FontSize="12"/>
+                                                        <TextBlock Grid.Column="4" Style="{StaticResource TableCellMuted}" FontSize="12">
+                                                            <Run Text="{Binding Source, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding CollectedAt, Mode=OneWay}"/>
+                                                        </TextBlock>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="{Binding TruncationNote}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,8,0,0"
+                                       Visibility="{Binding TruncationNote, Converter={StaticResource NullToVis}}"/>
+
+                            <!-- Referências -->
+                            <TextBlock Text="Microsoft references" Style="{StaticResource SectionText}" Margin="0,22,0,8"/>
+                            <ItemsControl ItemsSource="{Binding References}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Margin="0,0,0,6" TextWrapping="Wrap">
+                                            <Hyperlink Command="{Binding Open}" ToolTip="{Binding Url}"><Run Text="{Binding Title, Mode=OneWay}"/></Hyperlink>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

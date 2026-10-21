@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(AdsTfm)</TargetFramework>
+    <RootNamespace>ADSecurityAssessment.Reporting</RootNamespace>
+    <AssemblyName>ADSecurityAssessment.Reporting</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ADSecurityAssessment.Core\ADSecurityAssessment.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Modelo padrão embutido; um arquivo templates/report-template.html ao lado do executável tem precedência. -->
+    <EmbeddedResource Include="..\..\templates\report-template.html" LogicalName="templates/report-template.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ADSecurityAssessment.Tests" />
+  </ItemGroup>
+</Project>

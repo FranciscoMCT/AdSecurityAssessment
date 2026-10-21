@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "ruleId": "AD-INFRA-001",
+      "title": "Domain functional level lower than Windows Server 2012 R2",
+      "description": "The domain functional level determines which Active Directory features are available. The domain-controller-side protections of the Protected Users group require the Windows Server 2012 R2 domain functional level.",
+      "category": "Active Directory Infrastructure",
+      "module": "Active Directory Infrastructure",
+      "severity": "Medium",
+      "condition": "msDS-Behavior-Version of the domain is lower than 6 (Windows Server 2012 R2).",
+      "risk": "A low functional level prevents the use of newer security features (for example the DC-side protections for Protected Users) and usually reflects legacy domain controllers or an interrupted upgrade path.",
+      "recommendation": "Identify what keeps the domain at this level (legacy domain controllers, application compatibility), retire or upgrade them, and raise the domain functional level only after validating compatibility. A functional level increase cannot be authoritatively restored, so prepare a back-out plan first.",
+      "references": ["functional-levels", "protected-users"],
+      "dataset": "domains",
+      "scope": { "field": "FunctionalLevel", "op": "notNull" },
+      "where": { "field": "FunctionalLevel", "op": "lt", "value": 6 },
+      "affected": { "name": "Name", "kind": "Domain", "domain": "Name", "dn": "DistinguishedName" },
+      "evidenceSource": "LDAP: domain head (msDS-Behavior-Version)",
+      "evidence": [
+        { "property": "FunctionalLevelName", "label": "Domain functional level", "expected": ">= Windows Server 2012 R2" },
+        { "property": "FunctionalLevel", "label": "msDS-Behavior-Version", "expected": ">= 6" }
+      ]
+    },
+    {
+      "ruleId": "AD-INFRA-002",
+      "title": "Active Directory Recycle Bin is not enabled",
+      "description": "Active Directory Recycle Bin makes it possible to restore deleted objects with their attributes. It requires the Windows Server 2008 R2 forest functional level and, once enabled, cannot be disabled.",
+      "category": "Active Directory Infrastructure",
+      "module": "Active Directory Infrastructure",
+      "severity": "Low",
+      "condition": "Forest functional level is Windows Server 2008 R2 or higher and the Recycle Bin Feature optional feature is not enabled.",
+      "risk": "Without the Recycle Bin, recovering accidentally deleted users, groups or OUs depends on tombstone reanimation (attributes are lost) or on an authoritative restore from backup.",
+      "recommendation": "Evaluate enabling Active Directory Recycle Bin in a planned change. Enabling is irreversible; read the Microsoft documentation and confirm that the forest functional level and backup strategy are adequate first.",
+      "references": ["recycle-bin", "functional-levels"],
+      "dataset": "forest",
+      "scope": { "all": [ { "field": "FunctionalLevel", "op": "ge", "value": 4 }, { "field": "RecycleBinEnabled", "op": "notNull" } ] },
+      "where": { "field": "RecycleBinEnabled", "op": "eq", "value": false },
+      "affected": { "name": "Name", "kind": "Forest", "dn": "ConfigurationNamingContext" },
+      "evidenceSource": "LDAP: CN=Optional Features,CN=Directory Service (msDS-EnabledFeature)",
+      "evidence": [
+        { "property": "RecycleBinEnabled", "label": "Recycle Bin enabled", "expected": "True" },
+        { "property": "FunctionalLevelName", "label": "Forest functional level" }
+      ]
+    },
+    {
+      "ruleId": "AD-INFRA-004",
+      "title": "FSMO role owner is not a discovered domain controller",
+      "description": "Each FSMO role must be held by an existing, reachable domain controller. The role owner recorded in the directory was compared with the domain controllers discovered in the forest.",
+      "category": "Active Directory Infrastructure",
+      "module": "Domain Controllers",
+      "severity": "High",
+      "condition": "The server object that owns the FSMO role (fSMORoleOwner) does not match any domain controller discovered for the forest.",
+      "risk": "Operations that depend on the role (password changes handled by the PDC Emulator, RID allocation, schema or domain additions) fail or degrade when the role owner no longer exists or cannot be found.",
+      "recommendation": "Confirm the role owner (for example with netdom query fsmo). Transfer the role while the holder is online; seize it only when the holder is permanently unavailable, following the Microsoft guidance, and clean up metadata of the removed domain controller.",
+      "references": ["fsmo-placement"],
+      "dataset": "fsmo-roles",
+      "where": { "field": "OwnerIsKnownDc", "op": "eq", "value": false },
+      "affected": { "name": "DisplayName", "kind": "DomainController", "domain": "Domain" },
+      "evidenceSource": "LDAP: fSMORoleOwner",
+      "evidence": [
+        { "property": "Role", "label": "FSMO role" },
+        { "property": "OwnerServerDn", "label": "fSMORoleOwner", "expected": "Server object of an existing domain controller" },
+        { "property": "OwnerHostName", "label": "Owner host name" }
+      ]
+    },
+    {
+      "ruleId": "AD-INFRA-005",
+      "title": "Active Directory site with domain controllers but no subnets",
+      "description": "Clients find the closest domain controller by matching their IP address to a subnet that is associated with a site. A site that hosts domain controllers but has no subnet objects cannot be selected by any client.",
+      "category": "Active Directory Infrastructure",
+      "module": "Active Directory Infrastructure",
+      "severity": "Low",
+      "condition": "Site contains at least one domain controller and has no subnet object associated with it.",
+      "risk": "Clients may authenticate against domain controllers in distant sites, causing delays and unnecessary WAN traffic; undefined subnets also hinder troubleshooting of DC location.",
+      "recommendation": "Work with the network team to create the missing subnet objects and associate them with the correct site in Active Directory Sites and Services.",
+      "references": ["sites-subnets", "dc-locator"],
+      "dataset": "sites",
+      "where": { "all": [ { "field": "SubnetCount", "op": "eq", "value": 0 }, { "field": "DomainControllerCount", "op": "gt", "value": 0 } ] },
+      "affected": { "name": "Name", "kind": "Site", "dn": "DistinguishedName" },
+      "evidenceSource": "LDAP: CN=Sites,CN=Configuration (site, subnet and server objects)",
+      "evidence": [
+        { "property": "SubnetCount", "label": "Subnets associated", "expected": ">= 1" },
+        { "property": "DomainControllerCount", "label": "Domain controllers in site" }
+      ]
+    },
+    {
+      "ruleId": "AD-DC-002",
+      "title": "SYSVOL replicated with FRS instead of DFSR",
+      "description": "The File Replication Service (FRS) is deprecated for SYSVOL replication; DFSR is its replacement. A domain controller is flagged only when an FRS subscription object exists and no DFSR SYSVOL subscription object was found.",
+      "category": "Active Directory Infrastructure",
+      "module": "Legacy Configurations",
+      "severity": "Medium",
+      "condition": "nTFRSSubscriber object present under the DC computer object and no msDFSR-Subscription object found.",
+      "risk": "FRS is unsupported on current Windows Server versions; domain controllers still using it block upgrades and are prone to unreliable SYSVOL (Group Policy and logon script) replication.",
+      "recommendation": "Plan the SYSVOL migration from FRS to DFSR following the Microsoft migration guide, validating each migration state before moving to the next.",
+      "references": ["sysvol-dfsr-migration"],
+      "dataset": "domain-controllers",
+      "where": { "field": "SysvolReplication", "op": "eq", "value": "FRS" },
+      "affected": { "name": "Name", "kind": "DomainController", "domain": "Domain", "dn": "ComputerDn" },
+      "evidenceSource": "LDAP: DC computer object subtree (nTFRSSubscriber / msDFSR-Subscription)",
+      "evidence": [
+        { "property": "SysvolReplication", "label": "SYSVOL replication engine", "expected": "DFSR" },
+        { "property": "SysvolEvidence", "label": "Evidence" }
+      ]
+    },
+    {
+      "ruleId": "AD-REPL-001",
+      "title": "Inbound replication failures reported by replication metadata",
+      "description": "Replication neighbors read from the domain controllers report consecutive failures. Replication health depends on DNS, Kerberos, time, RPC and network connectivity.",
+      "category": "Active Directory Infrastructure",
+      "module": "Replication",
+      "severity": "High",
+      "condition": "Consecutive replication failure count of an inbound replication neighbor is greater than 0.",
+      "risk": "Failed replication leaves domain controllers with divergent data (stale passwords, group memberships and Group Policy), and prolonged failure can exceed the tombstone lifetime and cause lingering objects.",
+      "recommendation": "Review the replication status (repadmin /showrepl) and the Directory Service event log for the failing source/destination pair, correct the root cause (DNS, connectivity, authentication, time) and confirm that replication succeeds.",
+      "references": ["repl-troubleshooting", "repl-diagnose"],
+      "dataset": "replication-links",
+      "where": { "field": "ConsecutiveFailures", "op": "gt", "value": 0 },
+      "affected": { "name": "SourceServer", "kind": "DomainController", "domain": "Domain" },
+      "evidenceSource": "Replication metadata (ReplicationNeighbor)",
+      "evidence": [
+        { "property": "DestinationServer", "label": "Destination DC" },
+        { "property": "NamingContext", "label": "Naming context" },
+        { "property": "ConsecutiveFailures", "label": "Consecutive failures", "expected": "0" },
+        { "property": "LastSyncResult", "label": "Last sync result (Win32)", "expected": "0" },
+        { "property": "LastSyncMessage", "label": "Last sync message" },
+        { "property": "LastSuccessfulSync", "label": "Last successful sync" }
+      ]
+    },
+    {
+      "ruleId": "AD-DNS-001",
+      "title": "Domain controller host name does not resolve in DNS",
+      "description": "The fully qualified DNS name of each discovered domain controller was resolved from the assessment host. Name resolution failures break replication, DC location and authentication.",
+      "category": "Active Directory Infrastructure",
+      "module": "DNS",
+      "severity": "High",
+      "condition": "Resolution of the DC DNS host name returned no address or failed.",
+      "risk": "Domain controllers that cannot be resolved cannot be located by clients or replication partners; DNS misconfiguration is a common cause of replication failures.",
+      "recommendation": "Verify the DNS client configuration of the assessment host and the registration of the domain controller host (A/AAAA) records and the DC locator records in the domain's DNS zones.",
+      "references": ["verify-dns-replication", "dc-locator"],
+      "dataset": "dns-checks",
+      "scope": { "field": "Kind", "op": "eq", "value": "HostResolution" },
+      "where": { "field": "Success", "op": "eq", "value": false },
+      "affected": { "name": "Subject", "kind": "Dns", "domain": "Domain" },
+      "evidenceSource": "DNS resolution from the assessment host",
+      "evidence": [
+        { "property": "Success", "label": "Resolved", "expected": "True" },
+        { "property": "Detail", "label": "Detail" }
+      ]
+    },
+    {
+      "ruleId": "AD-DNS-002",
+      "title": "AD-integrated DNS zones allow insecure dynamic updates",
+      "description": "AD-integrated zones should accept only secure dynamic updates. The setting is stored in the binary dnsProperty attribute, whose layout is not interpreted in this version, so the rule is reported as Not Evaluated.",
+      "category": "Active Directory Infrastructure",
+      "module": "DNS",
+      "severity": "High",
+      "condition": "A zone is configured for 'Nonsecure and secure' dynamic updates instead of 'Secure only'.",
+      "risk": "Unauthenticated dynamic updates allow any host on the network to register or overwrite DNS records, enabling name hijacking.",
+      "recommendation": "In DNS Manager, review the dynamic update setting of each AD-integrated zone and use 'Secure only'.",
+      "references": ["dns-dynamic-update", "dns-secure-updates-howto"],
+      "dataset": "dns-zone-security",
+      "placeholder": true
+    }
+  ]
+}

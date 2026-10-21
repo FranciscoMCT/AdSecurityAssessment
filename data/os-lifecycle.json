@@ -1,0 +1,13 @@
+{
+  "$comment": "Datas de fim de suporte do Windows Server extraídas das páginas oficiais Microsoft Lifecycle (valores em UTC, convertidos do horário PT mostrado na página). Windows Server 2003 e anteriores NÃO constam: a página não foi recuperada, portanto versões não listadas são 'Not Evaluated', nunca assumidas. 'esuEnd' = fim do último ano de ESU, quando a página o lista.",
+  "products": [
+    { "key": "ws2008",   "name": "Windows Server 2008",    "ntVersion": "6.0",  "build": null,  "mainstreamEnd": null,         "extendedEnd": "2020-01-15T00:00:00Z", "esuEnd": null, "reference": "lifecycle-ws2008" },
+    { "key": "ws2008r2", "name": "Windows Server 2008 R2", "ntVersion": "6.1",  "build": null,  "mainstreamEnd": null,         "extendedEnd": "2020-01-15T00:00:00Z", "esuEnd": null, "reference": "lifecycle-ws2008r2" },
+    { "key": "ws2012",   "name": "Windows Server 2012",    "ntVersion": "6.2",  "build": null,  "mainstreamEnd": "2018-10-10T06:59:59Z", "extendedEnd": "2023-10-11T06:59:59Z", "esuEnd": "2026-10-14T06:59:59Z", "reference": "lifecycle-ws2012" },
+    { "key": "ws2012r2", "name": "Windows Server 2012 R2", "ntVersion": "6.3",  "build": null,  "mainstreamEnd": null,         "extendedEnd": "2023-10-11T00:00:00Z", "esuEnd": "2026-10-14T00:00:00Z", "reference": "lifecycle-ws2012r2" },
+    { "key": "ws2016",   "name": "Windows Server 2016",    "ntVersion": "10.0", "build": 14393, "mainstreamEnd": "2022-01-12T00:00:00Z", "extendedEnd": "2027-01-13T00:00:00Z", "esuEnd": null, "reference": "lifecycle-ws2016" },
+    { "key": "ws2019",   "name": "Windows Server 2019",    "ntVersion": "10.0", "build": 17763, "mainstreamEnd": null,         "extendedEnd": "2029-01-10T00:00:00Z", "esuEnd": null, "reference": "lifecycle-ws2019" },
+    { "key": "ws2022",   "name": "Windows Server 2022",    "ntVersion": "10.0", "build": 20348, "mainstreamEnd": "2026-10-14T00:00:00Z", "extendedEnd": "2031-10-15T00:00:00Z", "esuEnd": null, "reference": "lifecycle-ws2022" },
+    { "key": "ws2025",   "name": "Windows Server 2025",    "ntVersion": "10.0", "build": 26100, "mainstreamEnd": "2029-11-14T00:00:00Z", "extendedEnd": "2034-11-15T00:00:00Z", "esuEnd": null, "reference": "lifecycle-ws2025" }
+  ]
+}

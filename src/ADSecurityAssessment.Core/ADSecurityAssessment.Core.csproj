@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(AdsTfm)</TargetFramework>
+    <RootNamespace>ADSecurityAssessment.Core</RootNamespace>
+    <AssemblyName>ADSecurityAssessment.Core</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Catálogo oficial de referências Microsoft (fonte única: rules/references.json). Um arquivo com o mesmo
+         nome em <pasta>/rules/ sobrescreve o embutido em tempo de execução. -->
+    <EmbeddedResource Include="..\..\rules\references.json" LogicalName="references.json" />
+    <EmbeddedResource Include="..\..\data\os-lifecycle.json" LogicalName="os-lifecycle.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ADSecurityAssessment.Tests" />
+  </ItemGroup>
+</Project>

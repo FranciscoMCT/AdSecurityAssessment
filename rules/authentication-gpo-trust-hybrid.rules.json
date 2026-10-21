@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "ruleId": "AD-LDAP-001",
+      "title": "LDAP signing is not required on domain controllers",
+      "description": "Whether domain controllers require LDAP signing is a policy/registry setting that cannot be read through LDAP. The rule is reported as Not Evaluated.",
+      "category": "Authentication",
+      "module": "LDAP Security",
+      "severity": "High",
+      "condition": "Domain controller LDAP server signing requirement is not 'Require signing'.",
+      "risk": "Without required signing, LDAP traffic can be tampered with or relayed.",
+      "recommendation": "Check the 'Domain controller: LDAP server signing requirements' policy on the domain controllers and plan enforcement following the Microsoft guidance.",
+      "references": [
+        "ldap-signing"
+      ],
+      "dataset": "ldap-signing-config",
+      "placeholder": true
+    },
+    {
+      "ruleId": "AD-LDAP-002",
+      "title": "LDAP channel binding is not enforced on domain controllers",
+      "description": "LDAP channel binding is a registry/policy setting of the domain controllers that cannot be read through LDAP. The rule is reported as Not Evaluated.",
+      "category": "Authentication",
+      "module": "LDAP Security",
+      "severity": "Medium",
+      "condition": "Domain controller LDAP channel binding token policy is not 'Always'.",
+      "risk": "Without channel binding, LDAP over TLS authentication can be relayed.",
+      "recommendation": "Review the LDAP channel binding token requirements on the domain controllers and plan enforcement following the Microsoft guidance.",
+      "references": [
+        "ldap-channel-binding"
+      ],
+      "dataset": "ldap-channel-binding-config",
+      "placeholder": true
+    },
+    {
+      "ruleId": "AD-LDAP-003",
+      "title": "Anonymous LDAP operations are allowed (dSHeuristics)",
+      "description": "The seventh character of the dSHeuristics attribute of the Directory Service object is '2', which allows anonymous LDAP operations.",
+      "category": "Authentication",
+      "module": "LDAP Security",
+      "severity": "High",
+      "condition": "dSHeuristics character 7 equals '2'.",
+      "risk": "Anonymous operations allow unauthenticated clients to read directory data, which helps attackers enumerate the environment.",
+      "recommendation": "Reset the seventh dSHeuristics character to 0 (or remove the setting) after confirming that no application depends on anonymous access.",
+      "references": [
+        "anonymous-ldap",
+        "dsheuristics-attr"
+      ],
+      "dataset": "forest",
+      "where": {
+        "field": "AnonymousLdapAllowed",
+        "op": "eq",
+        "value": true
+      },
+      "affected": {
+        "name": "Name",
+        "kind": "Forest",
+        "dn": "ConfigurationNamingContext"
+      },
+      "evidenceSource": "LDAP: CN=Directory Service,CN=Windows NT,CN=Services,CN=Configuration (dSHeuristics)",
+      "evidence": [
+        {
+          "property": "DsHeuristics",
+          "label": "dSHeuristics",
+          "expected": "7th character is not '2'"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-SMB-001",
+      "title": "SMB signing is not required on domain controllers",
+      "description": "SMB signing configuration is a local server/policy setting that cannot be read through LDAP. The rule is reported as Not Evaluated.",
+      "category": "Authentication",
+      "module": "SMB Security",
+      "severity": "High",
+      "condition": "Domain controller SMB server signing is not required.",
+      "risk": "Without required signing, SMB sessions can be tampered with or relayed.",
+      "recommendation": "Verify the Microsoft network server signing policy on the domain controllers following the Microsoft guidance.",
+      "references": [
+        "smb-signing",
+        "smb-signing-control"
+      ],
+      "dataset": "smb-signing-config",
+      "placeholder": true
+    },
+    {
+      "ruleId": "AD-SMB-002",
+      "title": "SMBv1 is enabled on domain controllers",
+      "description": "The SMBv1 state is a local server setting that cannot be read through LDAP. The rule is reported as Not Evaluated.",
+      "category": "Authentication",
+      "module": "SMB Security",
+      "severity": "High",
+      "condition": "SMBv1 server component is enabled.",
+      "risk": "SMBv1 is a legacy protocol that should not be used.",
+      "recommendation": "Verify and remove SMBv1 from the domain controllers following the Microsoft guidance.",
+      "references": [
+        "smbv1"
+      ],
+      "dataset": "smb1-config",
+      "placeholder": true
+    },
+    {
+      "ruleId": "AD-NTLM-001",
+      "title": "NTLM authentication is not restricted",
+      "description": "LAN Manager authentication level and NTLM restrictions are policy/registry settings that cannot be read through LDAP. The rule is reported as Not Evaluated.",
+      "category": "Authentication",
+      "module": "NTLM",
+      "severity": "Medium",
+      "condition": "Network security: LAN Manager authentication level is lower than 'Send NTLMv2 response only'.",
+      "risk": "Legacy NTLM variants are weak and NTLM can be relayed.",
+      "recommendation": "Review the LAN Manager authentication level and NTLM auditing/restrictions following the Microsoft guidance.",
+      "references": [
+        "ntlm-overview"
+      ],
+      "dataset": "ntlm-config",
+      "placeholder": true
+    },
+    {
+      "ruleId": "AD-GPO-001",
+      "title": "Group Policy Preferences file contains a cpassword",
+      "description": "Group Policy Preferences XML files in SYSVOL contain a cpassword attribute. The value is encrypted with a published key and can be decrypted by any domain user. The tool records only the file and setting; the value is never read into the report.",
+      "category": "Group Policy",
+      "module": "Group Policy",
+      "severity": "Critical",
+      "condition": "A GPP XML file in SYSVOL contains a non-empty cpassword attribute.",
+      "risk": "Any authenticated user can read SYSVOL and decrypt the credential, which may belong to a privileged or shared local account.",
+      "recommendation": "Remove the password from the Group Policy Preference, change the exposed credential and use an alternative such as Windows LAPS for local administrator passwords.",
+      "references": [
+        "gpp-passwords",
+        "laps-overview"
+      ],
+      "dataset": "gpp-passwords",
+      "evaluatedDataset": "gpos",
+      "affected": {
+        "name": "RelativePath",
+        "kind": "Gpo",
+        "domain": "Domain"
+      },
+      "evidenceSource": "SYSVOL (read-only file scan)",
+      "evidence": [
+        {
+          "property": "GpoName",
+          "label": "GPO"
+        },
+        {
+          "property": "GpoGuid",
+          "label": "GPO GUID"
+        },
+        {
+          "property": "Setting",
+          "label": "Setting type",
+          "expected": "No cpassword present"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-TRUST-001",
+      "title": "External or forest trust without SID filtering",
+      "description": "SID filtering is reported as disabled for an external or forest trust (System.DirectoryServices.ActiveDirectory GetSidFilteringStatus).",
+      "category": "Active Directory Infrastructure",
+      "module": "Trusts",
+      "severity": "High",
+      "condition": "Trust classified as External or Forest where SID filtering status is disabled.",
+      "risk": "Without SID filtering, a compromised trusted domain can inject privileged SIDs into tickets (SID history) and escalate privileges in the trusting domain.",
+      "recommendation": "Review the need for the trust and enable SID filtering according to the Microsoft guidance (netdom trust /quarantine) after validating the impact on migrations that depend on SID history.",
+      "references": [
+        "domain-getsidfilteringstatus",
+        "ms02-001-sid-filtering",
+        "netdom-trust"
+      ],
+      "dataset": "trusts",
+      "scope": {
+        "all": [
+          {
+            "field": "IsExternalOrForest",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "SidFilteringEnabled",
+            "op": "notNull"
+          }
+        ]
+      },
+      "where": {
+        "field": "SidFilteringEnabled",
+        "op": "eq",
+        "value": false
+      },
+      "affected": {
+        "name": "Partner",
+        "kind": "Trust",
+        "domain": "Domain"
+      },
+      "evidenceSource": "Trust enumeration (GetAllTrustRelationships / GetSidFilteringStatus)",
+      "evidence": [
+        {
+          "property": "Classification",
+          "label": "Trust type"
+        },
+        {
+          "property": "DirectionName",
+          "label": "Direction"
+        },
+        {
+          "property": "SidFilteringEnabled",
+          "label": "SID filtering enabled",
+          "expected": "True"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-HYB-001",
+      "title": "Seamless SSO computer account password not rotated",
+      "description": "The AZUREADSSOACC computer account is used by Microsoft Entra Seamless SSO. Its Kerberos decryption key should be rolled over regularly, at least every {SeamlessSsoKeyRollDays} days according to Microsoft.",
+      "category": "Hybrid Identity",
+      "module": "Hybrid Identity / Microsoft Entra Connect",
+      "severity": "Medium",
+      "condition": "AZUREADSSOACC password older than {SeamlessSsoKeyRollDays} days.",
+      "risk": "A long-lived Seamless SSO decryption key increases the impact of its theft; a stolen key allows forging Kerberos tickets that Entra ID accepts.",
+      "recommendation": "Roll over the Seamless SSO Kerberos decryption key following the Microsoft procedure and schedule the rollover.",
+      "references": [
+        "seamless-sso-faq",
+        "seamless-sso-how-it-works"
+      ],
+      "dataset": "hybrid-indicators",
+      "applicableWhen": {
+        "dataset": "hybrid-indicators",
+        "where": {
+          "field": "Kind",
+          "op": "eq",
+          "value": "SeamlessSsoAccount"
+        },
+        "reason": "No AZUREADSSOACC (Seamless SSO) account found: no evidence of this hybrid identity feature."
+      },
+      "scope": {
+        "field": "Kind",
+        "op": "eq",
+        "value": "SeamlessSsoAccount"
+      },
+      "where": {
+        "field": "PasswordAgeDays",
+        "op": "gt",
+        "valueSetting": "SeamlessSsoKeyRollDays"
+      },
+      "affected": {
+        "name": "ObjectName",
+        "kind": "Computer",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: AZUREADSSOACC pwdLastSet",
+      "evidence": [
+        {
+          "property": "PasswordAgeDays",
+          "label": "Password age (days)",
+          "expected": "<= {SeamlessSsoKeyRollDays}"
+        },
+        {
+          "property": "PasswordLastSet",
+          "label": "pwdLastSet"
+        }
+      ]
+    },
+    {
+      "ruleId": "AD-HYB-002",
+      "title": "Seamless SSO computer account has delegation configured",
+      "description": "The AZUREADSSOACC computer account has unconstrained delegation, constrained delegation with protocol transition, or resource-based constrained delegation (msDS-AllowedToActOnBehalfOfOtherIdentity) configured.",
+      "category": "Hybrid Identity",
+      "module": "Hybrid Identity / Microsoft Entra Connect",
+      "severity": "High",
+      "condition": "AZUREADSSOACC with TRUSTED_FOR_DELEGATION, TRUSTED_TO_AUTH_FOR_DELEGATION or msDS-AllowedToActOnBehalfOfOtherIdentity set.",
+      "risk": "Delegation on this account may allow impersonation of users to the Entra Seamless SSO service or take-over of the account.",
+      "recommendation": "Remove the delegation from the AZUREADSSOACC account, following the Microsoft Defender for Identity and Seamless SSO guidance.",
+      "references": [
+        "seamless-sso-faq",
+        "mdi-seamless-sso-rbcd"
+      ],
+      "dataset": "hybrid-indicators",
+      "applicableWhen": {
+        "dataset": "hybrid-indicators",
+        "where": {
+          "field": "Kind",
+          "op": "eq",
+          "value": "SeamlessSsoAccount"
+        },
+        "reason": "No AZUREADSSOACC (Seamless SSO) account found: no evidence of this hybrid identity feature."
+      },
+      "scope": {
+        "field": "Kind",
+        "op": "eq",
+        "value": "SeamlessSsoAccount"
+      },
+      "where": {
+        "any": [
+          {
+            "field": "TrustedForDelegation",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "TrustedToAuthForDelegation",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "field": "HasAllowedToActOnBehalf",
+            "op": "eq",
+            "value": true
+          }
+        ]
+      },
+      "affected": {
+        "name": "ObjectName",
+        "kind": "Computer",
+        "domain": "Domain",
+        "dn": "DistinguishedName"
+      },
+      "evidenceSource": "LDAP: AZUREADSSOACC userAccountControl / msDS-AllowedToActOnBehalfOfOtherIdentity",
+      "evidence": [
+        {
+          "property": "UserAccountControl",
+          "label": "userAccountControl",
+          "format": "hex",
+          "expected": "No delegation flags"
+        },
+        {
+          "property": "HasAllowedToActOnBehalf",
+          "label": "RBCD configured",
+          "expected": "False"
+        }
+      ]
+    }
+  ]
+}

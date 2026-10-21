@@ -1,0 +1,16 @@
+{
+  "LdapPageSize": 500,
+  "QueryTimeoutSeconds": 60,
+  "CollectorTimeoutSeconds": 900,
+  "MaxObjectsPerQuery": 1000000,
+  "DnsResolutionTimeoutSeconds": 5,
+  "ScanSysvolForGppPasswords": true,
+  "MaxGpoFilesToScan": 20000,
+  "StaleAccountDays": 180,
+  "KrbtgtMaxPasswordAgeDays": 180,
+  "MinPasswordLength": 14,
+  "MinLockoutDurationMinutes": 15,
+  "MaxClockSkewMinutes": 5,
+  "SeamlessSsoKeyRollDays": 30,
+  "MaxAffectedObjectsPerFinding": 2000
+}

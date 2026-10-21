@@ -1,0 +1,21 @@
+<UserControl x:Class="ADSecurityAssessment.App.Views.LogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:ADSecurityAssessment.App.Views">
+    <Grid Margin="28,24,28,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="Activity log" Style="{StaticResource TitleText}"/>
+            <TextBlock Style="{StaticResource MutedText}" Margin="0,6,0,14"
+                       Text="Relevant operations are also written to the logs folder next to the executable. Passwords and secrets are never logged."/>
+        </StackPanel>
+        <Border Grid.Row="1" Style="{StaticResource TableFrame}">
+            <ListBox ItemsSource="{Binding LogLines}" Background="Transparent" BorderThickness="0" FontFamily="{StaticResource MonoFont}" FontSize="12"
+                     Foreground="{DynamicResource TextBrush}" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     views:LogAutoScroll.Enabled="True" AutomationProperties.Name="Activity log"/>
+        </Border>
+    </Grid>
+</UserControl>

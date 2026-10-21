@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(AdsTfm)</TargetFramework>
+    <RootNamespace>ADSecurityAssessment.Collectors</RootNamespace>
+    <AssemblyName>ADSecurityAssessment.Collectors</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ADSecurityAssessment.Core\ADSecurityAssessment.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Somente System.DirectoryServices.ActiveDirectory (vizinhos de replicação, confianças, SID filtering). O LDAP fica na camada Infrastructure. -->
+    <PackageReference Include="System.DirectoryServices" Version="$(AdsDsPackageVersion)" />
+  </ItemGroup>
+</Project>

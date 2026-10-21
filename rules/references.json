@@ -1,0 +1,305 @@
+{
+  "$comment": "Catalogo central de referencias. SOMENTE URLs oficiais Microsoft Learn verificadas durante o desenvolvimento. Regras apontam para estas chaves; chave desconhecida invalida a regra.",
+  "references": {
+    "priv-groups-appendix-b": {
+      "title": "Appendix B: Privileged Accounts and Groups in Active Directory",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/appendix-b--privileged-accounts-and-groups-in-active-directory"
+    },
+    "protected-accounts-appendix-c": {
+      "title": "Appendix C: Protected Accounts and Groups in Active Directory",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/appendix-c--protected-accounts-and-groups-in-active-directory"
+    },
+    "reduce-attack-surface": {
+      "title": "Reducing the Active Directory Attack Surface",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/reducing-the-active-directory-attack-surface"
+    },
+    "schema-admins-empty": {
+      "title": "Remove all the members from the Schema Admins group unless you are actively changing the schema",
+      "url": "https://learn.microsoft.com/services-hub/microsoft-engage-center/health/remediation-steps-ad/remove-all-members-from-the-schema-admins-group-unless-you-are-actively-changing-the-schema"
+    },
+    "protected-users": {
+      "title": "Protected Users security group",
+      "url": "https://learn.microsoft.com/windows-server/security/credentials-protection-and-management/protected-users-security-group"
+    },
+    "functional-levels": {
+      "title": "Active Directory Domain Services functional levels",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/active-directory-functional-levels"
+    },
+    "mdi-accounts-assessments": {
+      "title": "Accounts security posture assessments (Microsoft Defender for Identity)",
+      "url": "https://learn.microsoft.com/defender-for-identity/security-posture-assessments/accounts"
+    },
+    "uac-flags": {
+      "title": "Use the UserAccountControl flags to manipulate user account properties",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/active-directory/useraccountcontrol-manipulate-account-properties"
+    },
+    "krbtgt-reset": {
+      "title": "Active Directory Forest Recovery - Reset the krbtgt password",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/forest-recovery-guide/ad-forest-recovery-reset-the-krbtgt-password"
+    },
+    "default-accounts-krbtgt": {
+      "title": "Active Directory accounts (KRBTGT account)",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/understand-default-user-accounts"
+    },
+    "laps-overview": {
+      "title": "What is Windows LAPS?",
+      "url": "https://learn.microsoft.com/windows-server/identity/laps/laps-overview"
+    },
+    "laps-schema": {
+      "title": "Windows LAPS schema extensions reference",
+      "url": "https://learn.microsoft.com/windows-server/identity/laps/laps-technical-reference"
+    },
+    "dns-dynamic-update": {
+      "title": "Dynamic update (Windows Server DNS)",
+      "url": "https://learn.microsoft.com/windows-server/networking/dns/dynamic-update"
+    },
+    "dns-secure-updates-howto": {
+      "title": "How to configure DNS dynamic updates in Windows",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/networking/configure-dns-dynamic-updates-windows-server-2003"
+    },
+    "verify-dns-replication": {
+      "title": "Verify DNS Functionality to Support Directory Replication",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/troubleshoot/verify-dns-functionality-to-support-directory-replication"
+    },
+    "sysvol-dfsr-migration": {
+      "title": "Migrate SYSVOL replication from FRS to DFSR",
+      "url": "https://learn.microsoft.com/windows-server/storage/dfs-replication/migrate-sysvol-to-dfsr"
+    },
+    "ws2012-end-of-support": {
+      "title": "Windows Server 2012 and 2012 R2 reaching end of support",
+      "url": "https://learn.microsoft.com/lifecycle/announcements/windows-server-2012-r2-end-of-support"
+    },
+    "esu-windows-server": {
+      "title": "Extended Security Updates for Windows Server overview",
+      "url": "https://learn.microsoft.com/windows-server/get-started/extended-security-updates-overview"
+    },
+    "eos-2027": {
+      "title": "Ending Support in 2027 (Microsoft Lifecycle)",
+      "url": "https://learn.microsoft.com/lifecycle/end-of-support/end-of-support-2027"
+    },
+    "lifecycle-products": {
+      "title": "Microsoft Lifecycle - product search",
+      "url": "https://learn.microsoft.com/lifecycle/products/"
+    },
+    "kerberos-troubleshooting": {
+      "title": "Kerberos authentication troubleshooting guidance (clock synchronization)",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/windows-security/kerberos-authentication-troubleshooting-guidance"
+    },
+    "kerberos-registry": {
+      "title": "Kerberos protocol registry entries and KDC configuration keys in Windows",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/windows-security/kerberos-protocol-registry-kdc-configuration-keys"
+    },
+    "windows-time-service": {
+      "title": "Windows Time Service",
+      "url": "https://learn.microsoft.com/windows-server/networking/windows-time-service/windows-time-service"
+    },
+    "recycle-bin": {
+      "title": "Enable and use Active Directory Recycle Bin",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/get-started/adac/active-directory-recycle-bin"
+    },
+    "gmsa-overview": {
+      "title": "Group Managed Service Accounts overview",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/group-managed-service-accounts/group-managed-service-accounts/group-managed-service-accounts-overview"
+    },
+    "service-accounts": {
+      "title": "Service accounts",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/understand-service-accounts"
+    },
+    "gmsa-secure": {
+      "title": "Secure group managed service accounts",
+      "url": "https://learn.microsoft.com/entra/architecture/service-accounts-group-managed"
+    },
+    "seamless-sso-how-it-works": {
+      "title": "Microsoft Entra seamless single sign-on: Technical deep dive",
+      "url": "https://learn.microsoft.com/entra/identity/hybrid/connect/how-to-connect-sso-how-it-works"
+    },
+    "seamless-sso-faq": {
+      "title": "Microsoft Entra seamless single sign-on: Frequently asked questions",
+      "url": "https://learn.microsoft.com/entra/identity/hybrid/connect/how-to-connect-sso-faq"
+    },
+    "mdi-seamless-sso-rbcd": {
+      "title": "Security Assessment: Remove Resource Based Constrained Delegation for Microsoft Entra seamless SSO account",
+      "url": "https://learn.microsoft.com/defender-for-identity/remove-rbcd-microsoft-entra-seamless-single-sign-on-account"
+    },
+    "machine-account-quota": {
+      "title": "Default limit to number of workstations a user can join to the domain",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/active-directory/default-workstation-numbers-join-domain"
+    },
+    "domain-join-permissions": {
+      "title": "Active Directory domain join permissions",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/active-directory-domain-join-permissions"
+    },
+    "trust-attributes": {
+      "title": "Trust-Attributes attribute",
+      "url": "https://learn.microsoft.com/windows/win32/adschema/a-trustattributes"
+    },
+    "bastion-selective-auth": {
+      "title": "Planning a bastion environment (selective authentication)",
+      "url": "https://learn.microsoft.com/microsoft-identity-manager/pam/planning-bastion-environment"
+    },
+    "ms02-001-sid-filtering": {
+      "title": "Microsoft Security Bulletin MS02-001 (SID Filtering FAQ)",
+      "url": "https://learn.microsoft.com/security-updates/securitybulletins/2002/ms02-001"
+    },
+    "windows-security-baseline": {
+      "title": "Windows security baseline (Account Policies)",
+      "url": "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+    },
+    "account-lockout-threshold": {
+      "title": "Set the account lockout threshold to recommended value",
+      "url": "https://learn.microsoft.com/services-hub/microsoft-engage-center/health/remediation-steps-ad/set-the-account-lockout-threshold-to-the-recommended-value"
+    },
+    "stale-accounts": {
+      "title": "Regularly check for and remove inactive user accounts in the Active Directory",
+      "url": "https://learn.microsoft.com/services-hub/microsoft-engage-center/health/remediation-steps-ad/regularly-check-for-and-remove-inactive-user-accounts-in-active-directory"
+    },
+    "last-logon-timestamp": {
+      "title": "Last-Logon-Timestamp attribute",
+      "url": "https://learn.microsoft.com/windows/win32/adschema/a-lastlogontimestamp"
+    },
+    "kerberos-rc4": {
+      "title": "Detect and remediate RC4 usage in Kerberos",
+      "url": "https://learn.microsoft.com/windows-server/security/kerberos/detect-remediate-rc4-kerberos"
+    },
+    "adcs-ca-role": {
+      "title": "What is the Certification Authority Role Service?",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-cs/certification-authority-role"
+    },
+    "adcs-templates": {
+      "title": "Manage AD CS certificate templates on an enterprise CA",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-cs/manage-certificate-templates"
+    },
+    "adcs-secure-admin": {
+      "title": "Secure, delegate, and audit certification authority administration",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-cs/secure-delegate-audit-certification-authority"
+    },
+    "tombstone-event-2042": {
+      "title": "Active Directory replication Event ID 2042: It has been too long since this machine replicated",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/active-directory/active-directory-replication-event-id-2042"
+    },
+    "replication-error-8614": {
+      "title": "Troubleshoot Active Directory replication error 8614",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/active-directory/replication-error-8614"
+    },
+    "ldap-signing": {
+      "title": "LDAP signing overview for Active Directory Domain Services",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/ldap-signing"
+    },
+    "ldap-channel-binding": {
+      "title": "LDAP channel binding overview for Active Directory Domain Services",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/ldap-channel-binding"
+    },
+    "gpp-passwords": {
+      "title": "Group policy security assessments (Reversible passwords found in GPOs)",
+      "url": "https://learn.microsoft.com/defender-for-identity/security-posture-assessments/group-policy"
+    },
+    "credential-guard-delegation": {
+      "title": "Considerations and known issues when using Credential Guard (delegation)",
+      "url": "https://learn.microsoft.com/windows/security/identity-protection/credential-guard/considerations-known-issues"
+    },
+    "password-policy-m365": {
+      "title": "Password policy recommendations for Microsoft 365 passwords",
+      "url": "https://learn.microsoft.com/microsoft-365/admin/misc/password-policy-recommendations"
+    },
+    "smb-signing": {
+      "title": "SMB signing overview",
+      "url": "https://learn.microsoft.com/windows-server/storage/file-server/smb-signing-overview"
+    },
+    "smb-signing-control": {
+      "title": "Control SMB signing behavior",
+      "url": "https://learn.microsoft.com/windows-server/storage/file-server/smb-signing"
+    },
+    "smbv1": {
+      "title": "How to detect, enable and disable SMBv1, SMBv2, and SMBv3 in Windows",
+      "url": "https://learn.microsoft.com/windows-server/storage/file-server/troubleshoot/detect-enable-and-disable-smbv1-v2-v3"
+    },
+    "ntlm-overview": {
+      "title": "NTLM overview",
+      "url": "https://learn.microsoft.com/windows-server/security/kerberos/ntlm-overview"
+    },
+    "anonymous-ldap": {
+      "title": "Anonymous LDAP operations to Active Directory are disabled on domain controllers",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/active-directory/anonymous-ldap-operations-active-directory-disabled"
+    },
+    "dsheuristics-attr": {
+      "title": "DS-Heuristics attribute",
+      "url": "https://learn.microsoft.com/windows/win32/adschema/a-dsheuristics"
+    },
+    "engage-privileged-groups": {
+      "title": "Review and reduce the number of accounts in the highly privileged administrative groups (Microsoft Engage Center)",
+      "url": "https://learn.microsoft.com/services-hub/microsoft-engage-center/health/remediation-steps-ad/review-and-reduce-the-number-of-accounts-in-highly-privileged-administrative-groups"
+    },
+    "security-groups": {
+      "title": "Active Directory security groups",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/understand-security-groups"
+    },
+    "sites-subnets": {
+      "title": "Prevent Degraded Performance by Defining the Missing Subnets (Microsoft Engage Center)",
+      "url": "https://learn.microsoft.com/services-hub/microsoft-engage-center/health/remediation-steps-ad/prevent-degraded-performance-by-defining-missing-subnets"
+    },
+    "dc-locator": {
+      "title": "Locating domain controllers in Windows and Windows Server",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/dc-locator"
+    },
+    "dc-redundancy": {
+      "title": "Virtualized Domain Controller Deployment and Configuration",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/get-started/virtual-dc/virtualized-domain-controller-deployment-and-configuration"
+    },
+    "netdom-trust": {
+      "title": "netdom trust",
+      "url": "https://learn.microsoft.com/windows-server/administration/windows-commands/netdom-trust"
+    },
+    "domain-getsidfilteringstatus": {
+      "title": "Domain.GetSidFilteringStatus(String) Method",
+      "url": "https://learn.microsoft.com/dotnet/api/system.directoryservices.activedirectory.domain.getsidfilteringstatus"
+    },
+    "fsmo-placement": {
+      "title": "FSMO placement and optimization on Active Directory domain controllers",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/active-directory/fsmo-placement-and-optimization-on-ad-dcs"
+    },
+    "ad-schema-pwdproperties": {
+      "title": "Pwd-Properties attribute",
+      "url": "https://learn.microsoft.com/windows/win32/adschema/a-pwdproperties"
+    },
+    "lifecycle-ws2012": {
+      "title": "Windows Server 2012 lifecycle",
+      "url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2012"
+    },
+    "lifecycle-ws2008": {
+      "title": "Windows Server 2008 lifecycle",
+      "url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2008"
+    },
+    "lifecycle-ws2008r2": {
+      "title": "Windows Server 2008 R2 lifecycle",
+      "url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2008-r2"
+    },
+    "lifecycle-ws2012r2": {
+      "title": "Windows Server 2012 R2 lifecycle",
+      "url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2012-r2"
+    },
+    "lifecycle-ws2016": {
+      "title": "Windows Server 2016 lifecycle",
+      "url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2016"
+    },
+    "lifecycle-ws2019": {
+      "title": "Windows Server 2019 lifecycle",
+      "url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2019"
+    },
+    "lifecycle-ws2022": {
+      "title": "Windows Server 2022 lifecycle",
+      "url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2022"
+    },
+    "lifecycle-ws2025": {
+      "title": "Windows Server 2025 lifecycle",
+      "url": "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2025"
+    },
+    "repl-troubleshooting": {
+      "title": "Troubleshooting Active Directory Replication Problems",
+      "url": "https://learn.microsoft.com/windows-server/identity/ad-ds/manage/troubleshoot/troubleshooting-active-directory-replication-problems"
+    },
+    "repl-diagnose": {
+      "title": "Diagnose Active Directory replication failures",
+      "url": "https://learn.microsoft.com/troubleshoot/windows-server/active-directory/diagnose-replication-failures"
+    }
+  }
+}
