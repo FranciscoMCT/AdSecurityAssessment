@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(AdsTfm)-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>ADSecurityHardening</AssemblyName>
+    <RootNamespace>ADSecurityAssessment.HardeningApp</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Product>AD Security Hardening</Product>
+    <Version>1.0.0</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- Publicação com RuntimeIdentifier = UM único .exe auto-contido (runtime .NET + WPF + catálogo embutidos). -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ADSecurityAssessment.Hardening\ADSecurityAssessment.Hardening.csproj" />
+    <ProjectReference Include="..\ADSecurityAssessment.Hardening.Windows\ADSecurityAssessment.Hardening.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

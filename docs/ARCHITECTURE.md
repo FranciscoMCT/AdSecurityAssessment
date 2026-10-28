@@ -307,3 +307,9 @@ do WPF incluídas para auto-extração em pasta temporária do usuário). Regras
 **embutidos** como recursos; arquivos ao lado do exe (`rules\`, `config\`) têm prioridade quando presentes e válidos, e são só dados. A raiz portátil é a
 pasta do processo (`Environment.ProcessPath`); `config\`, `reports\`, `logs\`, `data\` são criadas na primeira execução (ou em `%LOCALAPPDATA%` se a pasta for
 somente leitura). O workflow `.github/workflows/build-portable.yml` reproduz esse build em runner Windows para quem não tem o SDK.
+
+## Módulo de hardening (separado do assessment)
+
+`ADSecurityAssessment.Hardening` (núcleo puro, sem dependências) · `ADSecurityAssessment.Hardening.Windows` (LDAP + SYSVOL, único lugar com `AddRequest`/`DeleteRequest`) ·
+`ADSecurityAssessment.HardeningApp` (WPF). Os projetos de assessment **nunca** o referenciam e a interface `IGpoStore` não tem operação de vínculo nem de edição;
+ambos os limites são verificados por `ReadOnlyGuardTests`. Ver [HARDENING.md](HARDENING.md).

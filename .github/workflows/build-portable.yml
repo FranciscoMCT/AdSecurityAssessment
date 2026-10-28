@@ -1,7 +1,9 @@
 name: build-portable
 
-# Gera o ADSecurityAssessment.exe (win-x64, single-file, self-contained) em um runner Windows do GitHub.
-# Nada precisa estar instalado na sua máquina: baixe o artefato "ADSecurityAssessment-win-x64" na aba Actions.
+# Gera, em um runner Windows do GitHub (nada precisa estar instalado na sua máquina):
+#   1) ADSecurityAssessment.exe  - avaliação SOMENTE LEITURA do AD (win-x64, single-file, self-contained)  -> artefato "ADSecurityAssessment-win-x64"
+#   2) Pasta ADSecurityHardening - app de hardening que cria GPOs de baseline SEM vínculo (exe + config + LEIA-ME) -> artefato "ADSecurityHardening-win-x64"
+# O workflow falha se qualquer teste falhar, inclusive os guardas que impedem o app de avaliação de escrever no AD.
 on:
   push:
     branches: [ main, master ]
@@ -37,6 +39,32 @@ jobs:
           -p:PublishReadyToRun=true
           -o dist
 
+      - name: Publish hardening app (single-file, self-contained, win-x64)
+        run: >
+          dotnet publish src/ADSecurityAssessment.HardeningApp/ADSecurityAssessment.HardeningApp.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishReadyToRun=true
+          -o dist-hardening
+
+      - name: Assemble the ADSecurityHardening folder
+        shell: pwsh
+        run: |
+          $exe = Join-Path 'dist-hardening' 'ADSecurityHardening.exe'
+          if (-not (Test-Path $exe)) { throw 'ADSecurityHardening.exe was not produced.' }
+          $pack = Join-Path 'dist-pack' 'ADSecurityHardening'
+          New-Item -ItemType Directory -Path (Join-Path $pack 'config') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $pack 'docs') -Force | Out-Null
+          Copy-Item $exe $pack
+          # Cópia editável do catálogo: renomeie para catalog.json para personalizar (o exe já traz o catálogo embutido).
+          Copy-Item hardening/catalog.json (Join-Path $pack 'config/catalog.example.json')
+          Copy-Item docs/HARDENING.md (Join-Path $pack 'docs/HARDENING.md')
+          Copy-Item build/LEIA-ME-HARDENING.txt (Join-Path $pack 'LEIA-ME.txt')
+          Get-ChildItem dist-hardening -Filter *.pdb -ErrorAction SilentlyContinue | Remove-Item -Force
+          Compress-Archive -Path $pack -DestinationPath (Join-Path 'dist-pack' 'ADSecurityHardening-win-x64.zip') -CompressionLevel Optimal
+          $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
+          Write-Host "ADSecurityHardening.exe = $mb MB"
+          Get-ChildItem -Recurse $pack | Format-Table FullName, Length
+
       - name: Verify the executable
         shell: pwsh
         run: |
@@ -52,6 +80,12 @@ jobs:
           path: dist/ADSecurityAssessment.exe
           if-no-files-found: error
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ADSecurityHardening-win-x64
+          path: dist-pack/ADSecurityHardening
+          if-no-files-found: error
+
       # Copia o .exe para a branch "binaries" (download direto pelo repositório, sem precisar abrir o artefato).
       - name: Publish exe to the 'binaries' branch
         if: github.event_name != 'pull_request'
@@ -62,13 +96,15 @@ jobs:
           $out = Join-Path $env:RUNNER_TEMP 'binaries'
           New-Item -ItemType Directory -Path $out -Force | Out-Null
           Copy-Item dist/ADSecurityAssessment.exe $out
+          Copy-Item dist-pack/ADSecurityHardening $out -Recurse
+          Copy-Item dist-pack/ADSecurityHardening-win-x64.zip $out
           Set-Content -Path (Join-Path $out 'BUILD.txt') -Value "commit: ${{ github.sha }}`nrun: ${{ github.run_id }}"
           Push-Location $out
           git init -q -b binaries
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -q -m "ADSecurityAssessment.exe build ${{ github.run_number }} (${{ github.sha }})"
+          git commit -q -m "ADSecurityAssessment.exe + ADSecurityHardening build ${{ github.run_number }} (${{ github.sha }})"
           git remote add origin "https://x-access-token:$env:GH_TOKEN@github.com/${{ github.repository }}.git"
           git push -f origin binaries
           if ($LASTEXITCODE -ne 0) { throw 'git push to binaries failed' }
@@ -80,4 +116,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" dist/ADSecurityAssessment.exe --title "AD Security Assessment ${{ github.ref_name }}" --notes "Executável único win-x64 (auto-contido). Baixe ADSecurityAssessment.exe e execute."
+        run: |
+          gh release create "${{ github.ref_name }}" dist/ADSecurityAssessment.exe dist-pack/ADSecurityHardening-win-x64.zip `
+            --title "AD Security Assessment ${{ github.ref_name }}" `
+            --notes "ADSecurityAssessment.exe (avaliação somente leitura, exe único) e ADSecurityHardening-win-x64.zip (pasta do app de hardening, cria GPOs de baseline SEM vínculo). Ambos win-x64 e auto-contidos."

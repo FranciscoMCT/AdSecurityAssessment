@@ -6,12 +6,19 @@ calcula um score documentado e gera relatórios HTML / JSON / CSV.
 
 ## Garantias de segurança
 
-* **Somente leitura:** o código só cria `SearchRequest` LDAP — nenhuma operação de Add/Modify/Delete/ModifyDN; nenhuma remediação automática; GPOs, usuários, grupos e DCs nunca são alterados.
+* **Somente leitura (app de avaliação):** o código do `ADSecurityAssessment.exe` só cria `SearchRequest` LDAP — nenhuma operação de Add/Modify/Delete/ModifyDN; nenhuma remediação automática; GPOs, usuários, grupos e DCs nunca são alterados. A *ação* mora em um módulo separado (ver **Módulo de hardening**) que o app de avaliação nunca referencia.
 * **Sem segredos:** atributos como `unicodePwd`, `ms-Mcs-AdmPwd`, `msLAPS-Password`, `msDS-ManagedPassword`, `trustAuth*` são **bloqueados** no gateway LDAP. A senha digitada em *Connect to Domain* vive apenas em `SecureString`, é descartada ao final e nunca é gravada ou registrada.
 * **Local:** nenhum dado do AD sai da máquina; não há HTTP/telemetria. O relatório avisa sobre dados sensíveis antes de ser exportado e nunca é transmitido.
 * **Menor privilégio:** funciona com um usuário de domínio comum; o que exigir mais permissão aparece como **Not Evaluated** (nunca como "conforme").
 * **Regras sem execução de código:** regras JSON seguem um esquema fechado (campos/operadores/datasets fixos); `script`, `code` etc. invalidam o arquivo. Regras complexas são C# compilado.
 * Os guardas automáticos em `tests/…/ReadOnlyGuardTests.cs` falham o build se alguém introduzir escrita no AD, rede externa, carga dinâmica de código, etc.
+
+## Módulo de hardening (separado)
+
+`ADSecurityHardening.exe` (pasta portátil, sem dependências, sem RSAT) **gera GPOs de baseline** (DCs, servidores membros, estações Windows 10/11) com configurações alinhadas a
+recomendações Microsoft e as cria **sem vínculo** — você as vincula a uma OU piloto. Mostra prévia, cria uma GPO `[ROLLBACK]` gêmea, compara a política de senha/bloqueio do domínio com
+as referências e só remove GPOs que ele mesmo criou. Nunca vincula, nunca edita GPO existente. Detalhes, explicação de GPO e rollout: [`docs/HARDENING.md`](docs/HARDENING.md);
+lista completa de configurações: [`docs/HARDENING-CATALOG.md`](docs/HARDENING-CATALOG.md). O workflow gera o `.exe` e o zip da pasta (artefato **ADSecurityHardening-win-x64**).
 
 ## Estrutura
 
@@ -19,10 +26,12 @@ calcula um score documentado e gera relatórios HTML / JSON / CSV.
 ADSecurityAssessment.sln
 src/   Core (modelo, contratos, motor de regras, scoring) · Rules (JSON + C#) · Collectors · Infrastructure (LDAP, log, paths)
        Reporting (HTML/JSON/CSV) · App (WPF/MVVM)
-tests/ ADSecurityAssessment.Tests   (xunit; 103 testes)
+       Hardening (núcleo puro) · Hardening.Windows (LDAP+SYSVOL) · HardeningApp (WPF)   ← módulo separado, ver docs/HARDENING.md
+tests/ ADSecurityAssessment.Tests   (xunit; inclui os testes do hardening e os guardas)
 rules/ regras JSON + references.json (somente learn.microsoft.com; embutidas no .exe)   templates/ modelo do relatório (embutido)
-config/ settings.json, scoring.json     data/ ciclo de vida de SO         build/ publish-portable.ps1
-docs/  ARCHITECTURE.md · SCORING.md · RULES.md
+config/ settings.json, scoring.json     data/ ciclo de vida de SO         build/ publish-portable.ps1, publish-hardening.ps1
+hardening/ catalog.json (catálogo de configurações do módulo de hardening; embutido no .exe)
+docs/  ARCHITECTURE.md · SCORING.md · RULES.md · HARDENING.md · HARDENING-CATALOG.md
 ```
 
 ## Como obter o executável (um único arquivo, sem dependências)

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Adaptador Windows do módulo de hardening: grava GPOs novas (SEM vínculo) direto por LDAP + SYSVOL.
+       Não usa RSAT, GPMC nem PowerShell. É o ÚNICO projeto autorizado a criar AddRequest/DeleteRequest LDAP (guardado por teste). -->
+  <PropertyGroup>
+    <TargetFramework>$(AdsTfm)</TargetFramework>
+    <RootNamespace>ADSecurityAssessment.Hardening.Windows</RootNamespace>
+    <AssemblyName>ADSecurityAssessment.Hardening.Windows</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ADSecurityAssessment.Hardening\ADSecurityAssessment.Hardening.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="$(AdsDsPackageVersion)" />
+    <PackageReference Include="System.DirectoryServices" Version="$(AdsDsPackageVersion)" />
+  </ItemGroup>
+</Project>

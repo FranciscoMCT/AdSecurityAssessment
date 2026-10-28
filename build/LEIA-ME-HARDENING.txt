@@ -1,0 +1,23 @@
+AD Security Hardening - GPOs de baseline Microsoft (criadas SEM vinculo)
+
+COMO USAR
+  1. Copie esta pasta para uma maquina que participe do dominio. Nao ha instalador nem dependencias.
+  2. Execute ADSecurityHardening.exe com uma conta que possa criar GPOs (Domain Admins ou Group Policy Creator Owners).
+     Nao precisa ser administrador local. Outra conta: runas /netonly /user:DOMINIO\conta ADSecurityHardening.exe
+  3. Aba 1: marque os escopos e as configuracoes (itens de alto risco vem desmarcados). Aba 3: gere a PREVIA e leia o relatorio.
+  4. Clique em Conectar ao dominio e depois em "Criar GPOs no dominio (sem vinculo)".
+  5. No GPMC, vincule UMA GPO a UMA OU piloto. Na maquina piloto: gpupdate /force e gpresult /h piloto.html.
+
+IMPORTANTE
+  - As GPOs sao criadas SEM vinculo: nada muda em producao ate voce vincular.
+  - Valores de Security Options e de auditoria permanecem na maquina mesmo desvinculando a GPO. Para reverter, vincule a GPO [ROLLBACK] com precedencia maior.
+  - A politica de senha/bloqueio do dominio so vale pela Default Domain Policy ou PSO: a ferramenta compara e orienta, nao altera.
+  - A ferramenta nunca vincula GPO, nunca edita GPO existente e so remove GPOs que ela mesma criou.
+  - Teste primeiro em um dominio de laboratorio.
+
+ARQUIVOS CRIADOS AO LADO DO EXE NA PRIMEIRA EXECUCAO
+  reports\  relatorios HTML/JSON      logs\  log de operacoes (sem senhas)      data\  created-gpos.json (GPOs criadas pela ferramenta)
+  config\catalog.example.json  copia editavel do catalogo; renomeie para catalog.json para personalizar (o exe ja traz o catalogo embutido)
+  (Se a pasta for somente leitura, essas pastas passam para %LOCALAPPDATA%\ADSecurityHardening.)
+
+Detalhes e explicacao de GPO: docs\HARDENING.md

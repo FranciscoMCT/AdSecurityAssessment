@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Núcleo do módulo de hardening: lógica pura, SEM dependências externas e SEM acesso a rede/AD.
+       Gera os arquivos de uma GPO (registry.pol, GptTmpl.inf, audit.csv, GPT.INI), planeja, valida e relata.
+       A escrita real no AD/SYSVOL fica em ADSecurityAssessment.Hardening.Windows, atrás da interface IGpoStore. -->
+  <PropertyGroup>
+    <TargetFramework>$(AdsTfm)</TargetFramework>
+    <RootNamespace>ADSecurityAssessment.Hardening</RootNamespace>
+    <AssemblyName>ADSecurityAssessment.Hardening</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Catálogo de configurações (fonte única: hardening/catalog.json). Um catalog.json em <pasta do exe>\config\ sobrescreve o embutido. -->
+    <EmbeddedResource Include="..\..\hardening\catalog.json" LogicalName="catalog.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ADSecurityAssessment.Tests" />
+  </ItemGroup>
+</Project>

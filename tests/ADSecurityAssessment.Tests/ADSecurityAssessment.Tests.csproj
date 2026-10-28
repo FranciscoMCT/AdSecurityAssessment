@@ -19,6 +19,8 @@
     <ProjectReference Include="..\..\src\ADSecurityAssessment.Collectors\ADSecurityAssessment.Collectors.csproj" />
     <ProjectReference Include="..\..\src\ADSecurityAssessment.Infrastructure\ADSecurityAssessment.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\ADSecurityAssessment.Reporting\ADSecurityAssessment.Reporting.csproj" />
+    <!-- Núcleo do módulo de hardening (lógica pura). O adaptador Windows e o app WPF são validados pela compilação no CI e pelos guardas estáticos. -->
+    <ProjectReference Include="..\..\src\ADSecurityAssessment.Hardening\ADSecurityAssessment.Hardening.csproj" />
   </ItemGroup>
 
   <ItemGroup>
