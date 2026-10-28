@@ -1,0 +1,2347 @@
+{
+  "catalogVersion": "2026.10.28",
+  "profiles": [
+    {
+      "id": "dc",
+      "kind": "gpo",
+      "title": "Controladores de Domínio",
+      "gpoName": "[Hardening] DC - Baseline",
+      "linkTarget": "OU=Domain Controllers (somente DCs)",
+      "description": "Baseline para a OU Domain Controllers: NTLM, assinatura LDAP/SMB, channel binding, firewall, spooler e auditoria avançada. Vincule primeiro a um DC de laboratório/replica, depois à OU."
+    },
+    {
+      "id": "member",
+      "kind": "gpo",
+      "title": "Servidores membros",
+      "gpoName": "[Hardening] Servidores Membros - Baseline",
+      "linkTarget": "OU de servidores membros (nunca vincular à OU Domain Controllers)",
+      "description": "Baseline para servidores Windows Server 2016 a 2025 ingressados no domínio, fora da OU Domain Controllers."
+    },
+    {
+      "id": "workstation",
+      "kind": "gpo",
+      "title": "Estações Windows 10/11",
+      "gpoName": "[Hardening] Estações - Baseline",
+      "linkTarget": "OU de estações de trabalho",
+      "description": "Baseline para estações Windows 10/11 ingressadas no domínio."
+    },
+    {
+      "id": "account-policy",
+      "kind": "advice",
+      "title": "Senha e bloqueio de conta do domínio",
+      "gpoName": "",
+      "linkTarget": "Default Domain Policy ou PSO",
+      "description": "Política de senha e bloqueio de conta do domínio só vale pela Default Domain Policy ou por PSO; GPO em OU afeta apenas contas locais. A ferramenta compara os valores atuais com as referências da Microsoft e gera o plano, sem alterar a Default Domain Policy."
+    }
+  ],
+  "settings": [
+    {
+      "id": "auth.ntlm-audit-incoming",
+      "category": "Autenticação e NTLM",
+      "title": "Auditar tráfego NTLM de entrada (todas as contas)",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Antes de restringir NTLM é preciso saber quem ainda o usa. Esta configuração apenas registra eventos no log Microsoft-Windows-NTLM/Operational; não bloqueia nada.",
+      "impact": "Gera eventos de auditoria. Deixe coletando por 2 a 4 semanas antes de elevar o nível de autenticação LAN Manager.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/security/kerberos/ntlm-overview",
+        "https://learn.microsoft.com/troubleshoot/windows-server/windows-security/audit-domain-controller-ntlmv1"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\MSV1_0\\AuditReceivingNTLMTraffic",
+          "type": "dword",
+          "value": 2,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "auth.ntlm-audit-domain",
+      "category": "Autenticação e NTLM",
+      "title": "Auditar autenticação NTLM no domínio (DC)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Registra no DC (evento 8004) cada autenticação NTLM validada, com usuário, estação e servidor de destino. É a fonte principal para mapear dependências de NTLM.",
+      "impact": "Somente auditoria. Volume moderado no log NTLM/Operational dos DCs.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/security/kerberos/ntlm-overview",
+        "https://learn.microsoft.com/troubleshoot/windows-server/windows-security/audit-domain-controller-ntlmv1"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Services\\Netlogon\\Parameters\\AuditNTLMInDomain",
+          "type": "dword",
+          "value": 7,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "auth.ntlm-audit-outgoing",
+      "category": "Autenticação e NTLM",
+      "title": "Auditar tráfego NTLM de saída",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mostra para quais servidores cada máquina ainda autentica com NTLM, o que ajuda a achar aplicações e dispositivos legados.",
+      "impact": "Somente auditoria.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/security/kerberos/ntlm-overview"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\MSV1_0\\RestrictSendingNTLMTraffic",
+          "type": "dword",
+          "value": 1,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "auth.lm-compat",
+      "category": "Autenticação e NTLM",
+      "title": "Nível de autenticação LAN Manager: somente NTLMv2, recusar LM e NTLM (nível 5)",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "high",
+      "defaultOn": false,
+      "rationale": "O baseline de segurança da Microsoft espera o nível 5. Eliminar LM e NTLMv1 remove respostas de desafio fáceis de quebrar offline.",
+      "impact": "Equipamentos antigos (NAS, impressoras multifuncionais, Samba antigo, aplicações legadas) que só falam NTLMv1 deixam de autenticar. Habilite somente depois de revisar a auditoria de NTLM.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows",
+        "https://learn.microsoft.com/troubleshoot/windows-server/windows-security/audit-domain-controller-ntlmv1"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\LmCompatibilityLevel",
+          "type": "dword",
+          "value": 5,
+          "revert": 3
+        }
+      ],
+      "prerequisite": "Coletar auditoria NTLM por 2 a 4 semanas e tratar as exceções encontradas."
+    },
+    {
+      "id": "auth.ntlm-min-session-security",
+      "category": "Autenticação e NTLM",
+      "title": "Segurança mínima de sessão NTLM: NTLMv2 + 128 bits (cliente e servidor)",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "high",
+      "defaultOn": false,
+      "rationale": "Exige NTLMv2 session security e criptografia de 128 bits em aplicações que usam o provedor NTLM, complementando o nível LAN Manager 5.",
+      "impact": "Mesmo risco de compatibilidade do nível LAN Manager 5. Habilite junto com ele, depois da auditoria.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\MSV1_0\\NTLMMinClientSec",
+          "type": "dword",
+          "value": 537395200,
+          "revert": 536870912
+        },
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\MSV1_0\\NTLMMinServerSec",
+          "type": "dword",
+          "value": 537395200,
+          "revert": 536870912
+        }
+      ],
+      "prerequisite": "Mesmo pré-requisito de auth.lm-compat."
+    },
+    {
+      "id": "auth.no-lm-hash",
+      "category": "Autenticação e NTLM",
+      "title": "Não armazenar o hash LAN Manager na próxima troca de senha",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "O hash LM é fraco e quebra em segundos. Windows Vista e posteriores já não o armazenam por padrão; a política garante isso em toda a base.",
+      "impact": "Só afeta clientes Windows 95/98 sem o Directory Services Client, que não devem mais existir.",
+      "references": [
+        "https://learn.microsoft.com/troubleshoot/windows-server/windows-security/prevent-windows-store-lm-hash-password"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\NoLMHash",
+          "type": "dword",
+          "value": 1,
+          "revert": 1
+        }
+      ]
+    },
+    {
+      "id": "auth.restrict-anonymous",
+      "category": "Autenticação e NTLM",
+      "title": "Restringir enumeração anônima de contas SAM e compartilhamentos",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": true,
+      "rationale": "Impede que sessões anônimas listem contas e compartilhamentos, informação usada em reconhecimento de ambiente.",
+      "impact": "Aplicações muito antigas que dependem de sessão nula podem falhar. Em ambientes com domínios NT4 ou Samba antigo, teste antes.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\RestrictAnonymous",
+          "type": "dword",
+          "value": 1,
+          "revert": 0
+        },
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\RestrictAnonymousSAM",
+          "type": "dword",
+          "value": 1,
+          "revert": 1
+        },
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\EveryoneIncludesAnonymous",
+          "type": "dword",
+          "value": 0,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "auth.wdigest",
+      "category": "Autenticação e NTLM",
+      "title": "Desabilitar WDigest (senha em texto claro na memória do LSASS)",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Com WDigest habilitado, a senha em texto claro fica na memória do LSASS e pode ser extraída por ferramentas de dump de credenciais.",
+      "impact": "Praticamente nenhum impacto em sistemas atuais. Só afeta autenticação HTTP Digest legada.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/securing-domain-controllers-against-attack"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest",
+          "name": "UseLogonCredential",
+          "type": "dword",
+          "value": 0,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "auth.kerberos-aes-only",
+      "category": "Autenticação e NTLM",
+      "title": "Kerberos: permitir somente AES128/AES256 (sem RC4)",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "high",
+      "defaultOn": false,
+      "rationale": "RC4 facilita Kerberoasting e AS-REP roasting offline. Restringir a AES eleva o custo de quebra de tickets.",
+      "impact": "Serviços, appliances e trusts que ainda dependem de RC4 deixam de funcionar. Verifique msDS-SupportedEncryptionTypes das contas de serviço antes.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/securing-domain-controllers-against-attack",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\Software\\Microsoft\\Windows\\CurrentControlSet\\Services\\Kerberos\\Parameters\\SupportedEncryptionTypes",
+          "type": "dword",
+          "value": 2147483640
+        }
+      ],
+      "prerequisite": "Inventariar contas de serviço e trusts com RC4 e migrá-las para AES."
+    },
+    {
+      "id": "auth.ldap-client-signing",
+      "category": "Autenticação e NTLM",
+      "title": "Cliente LDAP: exigir assinatura",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": false,
+      "rationale": "Garante que consultas LDAP originadas por esta máquina sejam assinadas, protegendo contra adulteração e replay.",
+      "impact": "Clientes que falam com servidores LDAP não-Microsoft sem suporte a assinatura (Linux, appliances) param de funcionar.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/ldap-signing",
+        "https://learn.microsoft.com/windows-server/identity/manage-ldap-signing-group-policy"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Services\\LDAP\\LDAPClientIntegrity",
+          "type": "dword",
+          "value": 2,
+          "revert": 1
+        }
+      ]
+    },
+    {
+      "id": "auth.uac-core",
+      "category": "Autenticação e NTLM",
+      "title": "UAC: manter ativo, consentimento em desktop seguro e filtrar contas locais na rede",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mantém o UAC ativo, solicita consentimento de administradores no desktop seguro e aplica filtro de token a contas locais em logons de rede, mitigando pass-the-hash lateral com contas locais.",
+      "impact": "Baixo. Administração remota com contas locais (não de domínio) passa a exigir conta de domínio.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\Software\\Microsoft\\Windows\\CurrentControlSet\\Policies\\System\\EnableLUA",
+          "type": "dword",
+          "value": 1,
+          "revert": 1
+        },
+        {
+          "via": "template",
+          "path": "MACHINE\\Software\\Microsoft\\Windows\\CurrentControlSet\\Policies\\System\\ConsentPromptBehaviorAdmin",
+          "type": "dword",
+          "value": 2,
+          "revert": 5
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+          "name": "LocalAccountTokenFilterPolicy",
+          "type": "dword",
+          "value": 0,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "auth.uac-admin-token",
+      "category": "Autenticação e NTLM",
+      "title": "UAC: Modo de Aprovação do Administrador para a conta Administrator interna",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": true,
+      "rationale": "Faz a conta Administrator (RID 500) também passar pelo UAC, reduzindo o uso dela como credencial genérica.",
+      "impact": "Scripts que usam a conta Administrator interna por rede ou sem elevação podem precisar de ajuste.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\Software\\Microsoft\\Windows\\CurrentControlSet\\Policies\\System\\FilterAdministratorToken",
+          "type": "dword",
+          "value": 1,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "auth.restrict-remote-sam",
+      "category": "Autenticação e NTLM",
+      "title": "Restringir chamadas remotas ao SAM somente a administradores",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": false,
+      "rationale": "Impede que usuários comuns enumerem contas e grupos locais remotamente (técnica usada por ferramentas de mapeamento de privilégio).",
+      "impact": "Ferramentas de inventário ou monitoração que consultam o SAM com contas sem privilégio de administrador deixam de funcionar.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\RestrictRemoteSAM",
+          "type": "string",
+          "value": "O:BAG:BAD:(A;;RC;;;BA)"
+        }
+      ]
+    },
+    {
+      "id": "net.smb1-off",
+      "category": "SMB, rede e acesso remoto",
+      "title": "Desabilitar SMBv1 (servidor e driver cliente)",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": true,
+      "rationale": "SMBv1 é um protocolo obsoleto e alvo de explorações em larga escala (EternalBlue/WannaCry).",
+      "impact": "Equipamentos muito antigos (scanners, NAS, sistemas legados) que só falam SMBv1 perdem acesso. Identifique-os antes com auditoria de SMB1.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/storage/file-server/smb-signing-overview",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters",
+          "name": "SMB1",
+          "type": "dword",
+          "value": 0,
+          "revert": 1
+        },
+        {
+          "via": "pol",
+          "key": "SYSTEM\\CurrentControlSet\\Services\\mrxsmb10",
+          "name": "Start",
+          "type": "dword",
+          "value": 4,
+          "revert": 3
+        },
+        {
+          "via": "pol",
+          "key": "SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation",
+          "name": "DependOnService",
+          "type": "multistring",
+          "value": [
+            "Bowser",
+            "MRxSmb20",
+            "NSI"
+          ],
+          "revert": [
+            "Bowser",
+            "MRxSmb10",
+            "MRxSmb20",
+            "NSI"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "net.smb-signing-server",
+      "category": "SMB, rede e acesso remoto",
+      "title": "Servidor SMB: exigir assinatura de pacotes",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": true,
+      "rationale": "Assinatura SMB impede ataques de adulteração e retransmissão (relay) de sessões SMB. A Microsoft documenta RequireSecuritySignature como valor esperado no baseline.",
+      "impact": "Clientes que não suportam assinatura (NAS e dispositivos antigos) deixam de conectar. Pode haver pequena perda de desempenho em transferências muito grandes.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/storage/file-server/smb-signing-overview",
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Services\\LanmanServer\\Parameters\\RequireSecuritySignature",
+          "type": "dword",
+          "value": 1,
+          "revert": 0,
+          "revertDc": 1
+        },
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Services\\LanmanServer\\Parameters\\EnableSecuritySignature",
+          "type": "dword",
+          "value": 1,
+          "revert": 0,
+          "revertDc": 1
+        }
+      ]
+    },
+    {
+      "id": "net.smb-signing-client",
+      "category": "SMB, rede e acesso remoto",
+      "title": "Cliente SMB: exigir assinatura de pacotes",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": true,
+      "rationale": "Garante que esta máquina só conclua sessões SMB assinadas, protegendo contra man-in-the-middle e relay.",
+      "impact": "Acesso a servidores/NAS sem assinatura passa a falhar.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/storage/file-server/smb-signing-overview",
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters\\RequireSecuritySignature",
+          "type": "dword",
+          "value": 1,
+          "revert": 0
+        },
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters\\EnableSecuritySignature",
+          "type": "dword",
+          "value": 1,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "net.llmnr-off",
+      "category": "SMB, rede e acesso remoto",
+      "title": "Desabilitar LLMNR (resolução multicast de nomes)",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "LLMNR/NBT-NS permitem envenenamento de nomes e captura de hashes NTLM na rede local. Em domínio, o DNS resolve os nomes.",
+      "impact": "Baixo. Nomes de dispositivos fora do DNS deixam de resolver por multicast.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/best-practices-for-securing-active-directory"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient",
+          "name": "EnableMulticast",
+          "type": "dword",
+          "value": 0,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "net.rdp-secure",
+      "category": "SMB, rede e acesso remoto",
+      "title": "Área de Trabalho Remota: exigir NLA, TLS e criptografia alta",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": true,
+      "rationale": "Exige autenticação em nível de rede (NLA), camada de segurança TLS e criptografia alta, reduzindo exposição pré-autenticação do RDP.",
+      "impact": "Clientes RDP muito antigos (sem NLA/CredSSP) deixam de conectar.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services",
+          "name": "UserAuthentication",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services",
+          "name": "SecurityLayer",
+          "type": "dword",
+          "value": 2,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services",
+          "name": "MinEncryptionLevel",
+          "type": "dword",
+          "value": 3,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "net.winrm-secure",
+      "category": "SMB, rede e acesso remoto",
+      "title": "WinRM: bloquear autenticação Basic/Digest e tráfego sem criptografia",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Evita que credenciais trafeguem de forma reversível ou sem criptografia por WinRM/PowerShell Remoting.",
+      "impact": "Scripts que usam WinRM com autenticação Basic precisam migrar para Kerberos/Negotiate.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\WinRM\\Client",
+          "name": "AllowBasic",
+          "type": "dword",
+          "value": 0,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\WinRM\\Client",
+          "name": "AllowUnencryptedTraffic",
+          "type": "dword",
+          "value": 0,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\WinRM\\Client",
+          "name": "AllowDigest",
+          "type": "dword",
+          "value": 0,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\WinRM\\Service",
+          "name": "AllowBasic",
+          "type": "dword",
+          "value": 0,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\WinRM\\Service",
+          "name": "AllowUnencryptedTraffic",
+          "type": "dword",
+          "value": 0,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "net.firewall",
+      "category": "SMB, rede e acesso remoto",
+      "title": "Firewall do Windows ativo nos 3 perfis, entrada bloqueada por padrão, log de descartes",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": true,
+      "rationale": "O baseline espera firewall ativo nos perfis Domínio, Privado e Público, com bloqueio de entrada por padrão e registro de pacotes descartados.",
+      "impact": "Se o firewall estava desligado, serviços de terceiros (agentes de backup, monitoração, ERP, banco de dados) podem perder acesso por falta de regra. Inventarie as portas em uso e crie as regras ANTES de vincular a GPO.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/securing-domain-controllers-against-attack"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile",
+          "name": "EnableFirewall",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile",
+          "name": "DefaultInboundAction",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile\\Logging",
+          "name": "LogDroppedPackets",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile\\Logging",
+          "name": "LogFileSize",
+          "type": "dword",
+          "value": 16384,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile",
+          "name": "EnableFirewall",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile",
+          "name": "DefaultInboundAction",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile\\Logging",
+          "name": "LogDroppedPackets",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile\\Logging",
+          "name": "LogFileSize",
+          "type": "dword",
+          "value": 16384,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PublicProfile",
+          "name": "EnableFirewall",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PublicProfile",
+          "name": "DefaultInboundAction",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PublicProfile\\Logging",
+          "name": "LogDroppedPackets",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PublicProfile\\Logging",
+          "name": "LogFileSize",
+          "type": "dword",
+          "value": 16384,
+          "revertDelete": true
+        }
+      ],
+      "prerequisite": "Levantar portas/serviços de terceiros em cada servidor e criar regras de entrada equivalentes na mesma GPO ou em outra."
+    },
+    {
+      "id": "sys.autorun-off",
+      "category": "Sistema e credenciais",
+      "title": "Desabilitar AutoRun/AutoPlay em todas as unidades",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Impede execução automática de mídia removível, vetor clássico de malware.",
+      "impact": "Baixo. Usuários passam a abrir mídias manualmente.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+          "name": "NoDriveTypeAutoRun",
+          "type": "dword",
+          "value": 255,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+          "name": "NoAutorun",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "sys.print-point-and-print",
+      "category": "Sistema e credenciais",
+      "title": "Point and Print: instalar drivers de impressora somente com administrador",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mitiga a classe de vulnerabilidades PrintNightmare exigindo privilégio de administrador para instalar drivers de impressora.",
+      "impact": "Usuários comuns deixam de instalar impressoras que exigem driver novo; use drivers pré-instalados ou servidor de impressão.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint",
+          "name": "RestrictDriverInstallationToAdministrators",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "sys.defender-pua",
+      "category": "Sistema e credenciais",
+      "title": "Microsoft Defender: proteção contra aplicativos potencialmente indesejados",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Bloqueia adware e software potencialmente indesejado no Microsoft Defender Antivírus.",
+      "impact": "Se houver antivírus de terceiros como principal, o Defender fica em modo passivo e a configuração é inofensiva.",
+      "references": [
+        "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows Defender",
+          "name": "PUAProtection",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "sys.windows-laps",
+      "category": "Sistema e credenciais",
+      "title": "Windows LAPS: senha do administrador local gerenciada e salva no AD",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "medium",
+      "defaultOn": false,
+      "rationale": "Cada máquina passa a ter senha única, aleatória e rotacionada para o administrador local, eliminando o reaproveitamento lateral da mesma senha.",
+      "impact": "Sem o esquema do AD estendido e as permissões configuradas, a política falha ao salvar a senha e gera erros nos clientes. Windows LAPS exige Windows atualizado (2019+/10+ com atualizações de abril/2023).",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/laps/laps-management-policy-settings"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\LAPS",
+          "name": "BackupDirectory",
+          "type": "dword",
+          "value": 2,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\LAPS",
+          "name": "PasswordAgeDays",
+          "type": "dword",
+          "value": 30,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\LAPS",
+          "name": "PasswordLength",
+          "type": "dword",
+          "value": 20,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\LAPS",
+          "name": "PasswordComplexity",
+          "type": "dword",
+          "value": 4,
+          "revertDelete": true
+        }
+      ],
+      "prerequisite": "Executar Update-LapsADSchema e Set-LapsADComputerSelfPermission na OU de destino antes de vincular."
+    },
+    {
+      "id": "dc.ldap-diagnostics",
+      "category": "Específico de Controladores de Domínio",
+      "title": "Habilitar log de eventos 2889 (clientes LDAP sem assinatura)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Registra no log Directory Service o IP e a conta de cada cliente que faz bind LDAP sem assinatura. É o dado necessário para exigir assinatura sem quebrar aplicações.",
+      "impact": "Aumenta levemente o volume do log Directory Service.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/manage-ldap-signing-group-policy",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/ldap-signing"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SYSTEM\\CurrentControlSet\\Services\\NTDS\\Diagnostics",
+          "name": "16 LDAP Interface Events",
+          "type": "dword",
+          "value": 2,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "dc.ldap-channel-binding",
+      "category": "Específico de Controladores de Domínio",
+      "title": "LDAP channel binding: quando suportado (valor 1)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Exige o token de channel binding de clientes que o suportam e registra os que não enviam, sem rejeitá-los. Prepara a migração para o valor 2 (sempre).",
+      "impact": "Baixo no valor 1; apenas auditoria dos clientes sem CBT. O valor 2 só deve ser usado depois de limpar esses clientes.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/ldap-channel-binding"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters",
+          "name": "LdapEnforceChannelBinding",
+          "type": "dword",
+          "value": 1,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "dc.ldap-signing-required",
+      "category": "Específico de Controladores de Domínio",
+      "title": "Servidor LDAP do DC: exigir assinatura",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "high",
+      "defaultOn": false,
+      "rationale": "Faz o DC rejeitar binds LDAP simples sem TLS e binds SASL que não solicitam assinatura, bloqueando adulteração e relay de LDAP.",
+      "impact": "Aplicações e dispositivos que fazem bind LDAP simples em texto claro (multifuncionais, sistemas legados, scripts) param de funcionar. Habilite somente depois de analisar os eventos 2889 por 2 a 4 semanas.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/manage-ldap-signing-group-policy",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/ldap-signing"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Services\\NTDS\\Parameters\\LDAPServerIntegrity",
+          "type": "dword",
+          "value": 2,
+          "revert": 1
+        }
+      ],
+      "prerequisite": "Habilitar dc.ldap-diagnostics e analisar os eventos 2889 por 2 a 4 semanas; migrar clientes para LDAPS/SASL com assinatura."
+    },
+    {
+      "id": "dc.print-spooler-remote-off",
+      "category": "Específico de Controladores de Domínio",
+      "title": "Spooler de impressão do DC: não aceitar conexões de clientes",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "DCs não devem expor o spooler: ele é vetor de coerção de autenticação e de exploração (PrintNightmare). A política impede conexões remotas ao spooler.",
+      "impact": "DCs deixam de funcionar como servidor de impressão (não devem ser). A poda de filas de impressão obsoletas no AD deixa de ocorrer: faça periodicamente.",
+      "references": [
+        "https://learn.microsoft.com/defender-for-identity/security-posture-assessments/identity-infrastructure",
+        "https://learn.microsoft.com/windows/client-management/mdm/policy-csp-admx-printing2"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows NT\\Printers",
+          "name": "RegisterSpoolerRemoteRpcEndPoint",
+          "type": "dword",
+          "value": 2,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "log.powershell-scriptblock",
+      "category": "Logs e telemetria",
+      "title": "Registrar blocos de script do PowerShell",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Registra o conteúdo dos scripts executados (evento 4104), essencial para investigação de ataques que usam PowerShell.",
+      "impact": "Aumenta o volume do log PowerShell/Operational e pode registrar dados sensíveis passados em scripts.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/monitoring-active-directory-for-signs-of-compromise"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging",
+          "name": "EnableScriptBlockLogging",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "log.process-cmdline",
+      "category": "Logs e telemetria",
+      "title": "Incluir linha de comando nos eventos de criação de processo",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "A linha de comando completa dos processos (evento 4688) é fundamental para detecção de ataque. Requer a auditoria de Criação de Processo.",
+      "impact": "A linha de comando pode conter segredos digitados por administradores; proteja o acesso ao log de segurança.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/monitoring-active-directory-for-signs-of-compromise"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit",
+          "name": "ProcessCreationIncludeCmdLine_Enabled",
+          "type": "dword",
+          "value": 1,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "log.event-log-size",
+      "category": "Logs e telemetria",
+      "title": "Tamanhos dos logs: Segurança 192 MB, Aplicativo e Sistema 32 MB",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "O log de segurança padrão (20 MB) sobrescreve evidências em horas em um DC. Tamanhos maiores preservam o histórico para investigação.",
+      "impact": "Consome mais disco (cerca de 256 MB por máquina).",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations"
+      ],
+      "entries": [
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\EventLog\\Security",
+          "name": "MaxSize",
+          "type": "dword",
+          "value": 196608,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\EventLog\\Application",
+          "name": "MaxSize",
+          "type": "dword",
+          "value": 32768,
+          "revertDelete": true
+        },
+        {
+          "via": "pol",
+          "key": "SOFTWARE\\Policies\\Microsoft\\Windows\\EventLog\\System",
+          "name": "MaxSize",
+          "type": "dword",
+          "value": 32768,
+          "revertDelete": true
+        }
+      ]
+    },
+    {
+      "id": "audit.force-subcategory",
+      "category": "Auditoria avançada",
+      "title": "Forçar subcategorias de auditoria a sobrepor as categorias legadas",
+      "scopes": [
+        "dc",
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Sem isto, a política de auditoria por categoria legada pode sobrescrever as subcategorias da auditoria avançada.",
+      "impact": "Nenhum além da mudança de modelo de auditoria. É dependência de todas as subcategorias abaixo e é incluída automaticamente.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/monitoring-active-directory-for-signs-of-compromise",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations"
+      ],
+      "entries": [
+        {
+          "via": "template",
+          "path": "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\SCENoApplyLegacyAuditPolicy",
+          "type": "dword",
+          "value": 1,
+          "revert": 0
+        }
+      ]
+    },
+    {
+      "id": "audit.dc.credential-validation",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Validação de credenciais (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Valida credenciais (eventos 4774-4777): base para detectar password spraying e força bruta.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "CredentialValidation",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.kerberos-authentication-service",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Serviço de autenticação Kerberos (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Pedidos de TGT (4768/4771/4772): detecta AS-REP roasting e falhas Kerberos.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "KerberosAuthenticationService",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.kerberos-service-ticket-operations",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Operações de tíquete de serviço Kerberos (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Pedidos de ticket de serviço (4769): detecta Kerberoasting.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "KerberosServiceTicketOperations",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.computer-account-management",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Gerenciamento de conta de computador (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Criação/alteração de contas de computador (4741-4743): detecta uso indevido de MachineAccountQuota.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "ComputerAccountManagement",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.security-group-management",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Gerenciamento de grupo de segurança (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças em grupos de segurança (4728-4737, 4756): detecta elevação de privilégio.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SecurityGroupManagement",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.distribution-group-management",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Gerenciamento de grupo de distribuição (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças em grupos de distribuição.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "DistributionGroupManagement",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.other-account-management-events",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Outros eventos de gerenciamento de conta (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Eventos de gerenciamento de conta não cobertos em outras subcategorias.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "OtherAccountManagementEvents",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.user-account-management",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Gerenciamento de conta de usuário (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Criação, alteração, bloqueio e reset de contas de usuário (4720-4740).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "UserAccountManagement",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.directory-service-access",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Acesso ao serviço de diretório (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Acessos a objetos do AD com SACL (4662): base para detectar DCSync.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "DirectoryServiceAccess",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.directory-service-changes",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Alterações no serviço de diretório (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças em objetos do AD com valores antigo e novo (5136-5141).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "DirectoryServiceChanges",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.logon",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Logon (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Logons (4624/4625/4648): essencial para rastrear acesso.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "Logon",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.logoff",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Logoff (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Logoffs (4634/4647).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "Logoff",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.account-lockout",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Bloqueio de conta (Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Falhas de logon por conta bloqueada (4625).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "AccountLockout",
+          "success": false,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.special-logon",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Logon especial (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Logons com privilégios especiais (4672): detecta uso de contas administrativas.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SpecialLogon",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.other-logon-logoff-events",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Outros eventos de logon/logoff (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Eventos de sessão de RDP, bloqueio de estação e RunAs.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "OtherLogonLogoffEvents",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.group-membership",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Associação a grupos (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Lista os grupos do usuário no logon (4627).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "GroupMembership",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.process-creation",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Criação de processo (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Criação de processos (4688): base para detecção comportamental.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "ProcessCreation",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.audit-policy-change",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Alteração da política de auditoria (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças na política de auditoria (4719): detecta tentativa de apagar rastros.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "AuditPolicyChange",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.authentication-policy-change",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Alteração da política de autenticação (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças em trusts e política de autenticação (4706-4713).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "AuthenticationPolicyChange",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.sensitive-privilege-use",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Uso de privilégio confidencial (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Uso de privilégios sensíveis (4672-4674).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SensitivePrivilegeUse",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.security-state-change",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Alteração do estado de segurança (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças de estado de segurança do sistema (4608-4616).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SecurityStateChange",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.security-system-extension",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Extensão do sistema de segurança (Sucesso)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Carregamento de extensões de segurança, como pacotes de autenticação (4610-4622).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SecuritySystemExtension",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.dc.system-integrity",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Integridade do sistema (Sucesso e Falha)",
+      "scopes": [
+        "dc"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Violações de integridade do sistema (4612, 5038).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SystemIntegrity",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.credential-validation",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Validação de credenciais (Sucesso e Falha)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Valida credenciais (eventos 4774-4777): base para detectar password spraying e força bruta.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "CredentialValidation",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.security-group-management",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Gerenciamento de grupo de segurança (Sucesso)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças em grupos de segurança (4728-4737, 4756): detecta elevação de privilégio.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SecurityGroupManagement",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.user-account-management",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Gerenciamento de conta de usuário (Sucesso e Falha)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Criação, alteração, bloqueio e reset de contas de usuário (4720-4740).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "UserAccountManagement",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.logon",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Logon (Sucesso e Falha)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Logons (4624/4625/4648): essencial para rastrear acesso.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "Logon",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.logoff",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Logoff (Sucesso)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Logoffs (4634/4647).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "Logoff",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.account-lockout",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Bloqueio de conta (Falha)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Falhas de logon por conta bloqueada (4625).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "AccountLockout",
+          "success": false,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.special-logon",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Logon especial (Sucesso)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Logons com privilégios especiais (4672): detecta uso de contas administrativas.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SpecialLogon",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.other-logon-logoff-events",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Outros eventos de logon/logoff (Sucesso e Falha)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Eventos de sessão de RDP, bloqueio de estação e RunAs.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "OtherLogonLogoffEvents",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.group-membership",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Associação a grupos (Sucesso)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Lista os grupos do usuário no logon (4627).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "GroupMembership",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.process-creation",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Criação de processo (Sucesso)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Criação de processos (4688): base para detecção comportamental.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "ProcessCreation",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.audit-policy-change",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Alteração da política de auditoria (Sucesso e Falha)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças na política de auditoria (4719): detecta tentativa de apagar rastros.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "AuditPolicyChange",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.authentication-policy-change",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Alteração da política de autenticação (Sucesso)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças em trusts e política de autenticação (4706-4713).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "AuthenticationPolicyChange",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.sensitive-privilege-use",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Uso de privilégio confidencial (Sucesso e Falha)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Uso de privilégios sensíveis (4672-4674).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SensitivePrivilegeUse",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.security-state-change",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Alteração do estado de segurança (Sucesso)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Mudanças de estado de segurança do sistema (4608-4616).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SecurityStateChange",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.security-system-extension",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Extensão do sistema de segurança (Sucesso)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Carregamento de extensões de segurança, como pacotes de autenticação (4610-4622).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SecuritySystemExtension",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.system-integrity",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Integridade do sistema (Sucesso e Falha)",
+      "scopes": [
+        "member",
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Violações de integridade do sistema (4612, 5038).",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "SystemIntegrity",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.pnp-activity",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Atividade Plug and Play (Sucesso)",
+      "scopes": [
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Dispositivos Plug and Play externos (6416): detecta mídia removível.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "PnpActivity",
+          "success": true,
+          "failure": false
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    },
+    {
+      "id": "audit.client.removable-storage",
+      "category": "Auditoria avançada",
+      "title": "Auditar: Armazenamento removível (Sucesso e Falha)",
+      "scopes": [
+        "workstation"
+      ],
+      "risk": "low",
+      "defaultOn": true,
+      "rationale": "Acessos a armazenamento removível (4663). Requer SACL ou política de acesso a armazenamento removível; sem ela gera poucos eventos.",
+      "impact": "Aumenta o volume do log de segurança. Os tamanhos de log recomendados (log.event-log-size) compensam.",
+      "references": [
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations",
+        "https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration"
+      ],
+      "entries": [
+        {
+          "via": "audit",
+          "subcategory": "RemovableStorage",
+          "success": true,
+          "failure": true
+        }
+      ],
+      "requires": [
+        "audit.force-subcategory"
+      ]
+    }
+  ],
+  "accountPolicy": [
+    {
+      "id": "min-length",
+      "label": "Tamanho mínimo da senha",
+      "attribute": "minPwdLength",
+      "comparison": "gte",
+      "recommended": 14,
+      "unit": "caracteres",
+      "note": "Referência do baseline da Microsoft: 14 ou mais caracteres.",
+      "reference": "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+    },
+    {
+      "id": "complexity",
+      "label": "Requisitos de complexidade",
+      "attribute": "pwdProperties",
+      "comparison": "bit1",
+      "recommended": 1,
+      "unit": "",
+      "note": "Referência do baseline da Microsoft: habilitado.",
+      "reference": "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+    },
+    {
+      "id": "min-age",
+      "label": "Idade mínima da senha",
+      "attribute": "minPwdAgeDays",
+      "comparison": "gte",
+      "recommended": 1,
+      "unit": "dias",
+      "note": "Referência do baseline da Microsoft: 1 ou mais dias, para impedir troca em sequência que anule o histórico.",
+      "reference": "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+    },
+    {
+      "id": "history",
+      "label": "Histórico de senhas",
+      "attribute": "pwdHistoryLength",
+      "comparison": "gte",
+      "recommended": 24,
+      "unit": "senhas",
+      "note": "Referência comum de mercado (24 senhas). Confirme no baseline do seu sistema operacional.",
+      "reference": "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+    },
+    {
+      "id": "lockout-threshold",
+      "label": "Limite de bloqueio de conta",
+      "attribute": "lockoutThreshold",
+      "comparison": "range1-10",
+      "recommended": 10,
+      "unit": "tentativas",
+      "note": "O baseline atual do Security Compliance Toolkit recomenda 10; benchmarks mais estritos usam 5 ou menos. Nunca 0 (desligado) sem monitoração de falhas de logon.",
+      "reference": "https://learn.microsoft.com/services-hub/microsoft-engage-center/health/remediation-steps-ad/set-the-account-lockout-threshold-to-the-recommended-value"
+    },
+    {
+      "id": "lockout-duration",
+      "label": "Duração do bloqueio",
+      "attribute": "lockoutDurationMinutes",
+      "comparison": "gte",
+      "recommended": 15,
+      "unit": "minutos",
+      "note": "Referência do baseline da Microsoft: 15 minutos ou mais.",
+      "reference": "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+    },
+    {
+      "id": "lockout-window",
+      "label": "Zerar contador de bloqueio após",
+      "attribute": "lockoutObservationMinutes",
+      "comparison": "gte",
+      "recommended": 15,
+      "unit": "minutos",
+      "note": "Referência do baseline da Microsoft: 15 minutos ou mais.",
+      "reference": "https://learn.microsoft.com/azure/governance/policy/samples/guest-configuration-baseline-windows"
+    }
+  ]
+}
